@@ -1,4 +1,4 @@
-/* frontend/src/components/Auth/Auth.css */
+/* frontend/src/components/Auth/Auth.css - Updated with dark mode */
 
 .auth-container {
   min-height: 100vh;
@@ -7,6 +7,7 @@
   justify-content: center;
   background: var(--fb-bg);
   padding: 20px;
+  transition: background-color 0.3s ease;
 }
 
 .auth-card {
@@ -15,7 +16,9 @@
   padding: 40px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--fb-shadow), 0 8px 16px var(--fb-shadow);
+  border: 1px solid var(--fb-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .auth-header {
@@ -65,19 +68,21 @@
   border: 1px solid var(--fb-border);
   border-radius: 6px;
   font-size: 15px;
-  background: #f0f2f5;
+  background: var(--fb-input-bg);
+  color: var(--fb-text);
   transition: all 0.2s;
 }
 
 .form-group input:focus {
   outline: none;
-  background: white;
+  background: var(--fb-card-bg);
   border-color: var(--fb-blue);
+  box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
 }
 
 .form-group input.error {
   border-color: var(--fb-negative);
-  background: #ffebe9;
+  background: var(--fb-error-bg);
 }
 
 .error-message {
@@ -129,9 +134,21 @@
   text-decoration: underline;
 }
 
-/* Loading spinner for auth button */
-.auth-button .spin {
-  animation: fb-spin 1s linear infinite;
+/* Dark mode specific overrides for auth */
+.dark-mode .auth-card {
+  background: var(--fb-card-bg);
+  border-color: var(--fb-border);
+}
+
+.dark-mode .form-group input {
+  background: var(--fb-input-bg);
+  border-color: var(--fb-border);
+  color: var(--fb-text);
+}
+
+.dark-mode .form-group input:focus {
+  background: var(--fb-card-bg);
+  border-color: var(--fb-blue);
 }
 
 @media (max-width: 480px) {

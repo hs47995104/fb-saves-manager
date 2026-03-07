@@ -1,31 +1,30 @@
+// frontend/src/components/AllItemsView.js - Redesigned version
+
 import React, { useState, useEffect, useCallback } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { toast } from 'react-toastify';
 import { 
   getSaves, 
   getStats, 
-  getAllItems,
-  deleteAllSeen 
+  getAllItems
 } from '../api';
 import { useSelection } from '../contexts/SelectionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { detectDuplicates, filterItemsByDuplicateSettings } from '../utils/duplicateDetector';
 import ItemCard from './ItemCard';
-import DeleteModal from './DeleteModal';
 import BatchActionBar from './BatchActionBar';
 import { 
   FiLoader, 
   FiBarChart2, 
   FiRefreshCw, 
-  FiTrash2,
-  FiEye,
-  FiEyeOff,
-  FiChevronDown,
-  FiChevronUp,
   FiSearch,
   FiFilter,
   FiHeart,
-  FiCopy
+  FiCopy,
+  FiEye,
+  FiEyeOff,
+  FiChevronDown,
+  FiChevronUp
 } from 'react-icons/fi';
 import './Styles.css';
 
@@ -42,9 +41,6 @@ const AllItemsView = ({ onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  
-  const [showDeleteAllSeenModal, setShowDeleteAllSeenModal] = useState(false);
-  const [deletingAllSeen, setDeletingAllSeen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeen, setFilterSeen] = useState('unseen');
@@ -140,26 +136,6 @@ const AllItemsView = ({ onUpdate }) => {
     }
   };
 
-  const handleDeleteAllSeen = async () => {
-    setDeletingAllSeen(true);
-    try {
-      const response = await deleteAllSeen();
-      
-      if (response.data.success) {
-        toast.success(`Deleted ${response.data.totalDeleted} seen items`);
-        setShowDeleteAllSeenModal(false);
-        clearSelection();
-        await handleRefresh();
-      } else {
-        toast.error(response.data.error || 'Failed to delete seen items');
-      }
-    } catch (error) {
-      toast.error(error.message || 'Failed to delete seen items');
-    } finally {
-      setDeletingAllSeen(false);
-    }
-  };
-
   const getFilteredItems = useCallback(() => {
     let filtered = items;
     
@@ -203,6 +179,11 @@ const AllItemsView = ({ onUpdate }) => {
   const filteredItems = getFilteredItems();
   const duplicateCount = Array.from(duplicateMap.values()).filter(d => d.isDuplicate).length;
 
+  // Calculate percentages
+  const seenPercentage = stats ? Math.round((stats.seenSaves / (stats.totalSaves || 1)) * 100) : 0;
+  const favoritePercentage = stats ? Math.round(((stats.favoriteSaves || 0) / (stats.totalSaves || 1)) * 100) : 0;
+  const duplicatePercentage = stats ? Math.round((duplicateCount / (stats.totalSaves || 1)) * 100) : 0;
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -226,60 +207,13 @@ const AllItemsView = ({ onUpdate }) => {
 
   return (
     <div className="all-items-container">
+      {/* Header Section - Clean and minimal */}
       <div className="list-header">
-        <h1>All Saved Items</h1>
+        <div className="header-title-section">
+          <h1>All Saved Items</h1>
+          <span className="total-count">{stats?.totalSaves || 0} items</span>
+        </div>
         
-        {stats && (
-          <div className="stats-bar">
-            <div className="stat">
-              <FiBarChart2 />
-              <span>Total: {stats.totalSaves}</span>
-            </div>
-            <div className="stat">
-              <FiEye />
-              <span>Seen: {stats.seenSaves}</span>
-              <span className="stat-percent">
-                ({Math.round((stats.seenSaves / (stats.totalSaves || 1)) * 100)}%)
-              </span>
-            </div>
-            <div className="stat" style={{ color: '#e74c3c' }}>
-              <FiHeart />
-              <span>Favorites: {stats.favoriteSaves || 0}</span>
-              <span className="stat-percent">
-                ({Math.round(((stats.favoriteSaves || 0) / (stats.totalSaves || 1)) * 100)}%)
-              </span>
-            </div>
-            
-            {/* Note about default unseen filter */}
-            <div className="stat" style={{ color: '#1877f2', background: '#e7f3ff', padding: '4px 12px', borderRadius: '20px' }}>
-              <FiEyeOff />
-              <span>Showing unseen by default</span>
-            </div>
-            
-            {/* Duplicate stats - only show if duplicates are enabled in settings */}
-            {settings.showDuplicates && duplicateCount > 0 && (
-              <div className="stat duplicate-stat">
-                <FiCopy />
-                <span>Duplicates: {duplicateCount}</span>
-                <span className="stat-percent">
-                  ({Math.round((duplicateCount / (stats.totalSaves || 1)) * 100)}%)
-                </span>
-              </div>
-            )}
-            
-            {/* Delete Seen button - only show if there are seen items */}
-            {stats.seenSaves > 0 && (
-              <button
-                className="delete-seen-btn"
-                onClick={() => setShowDeleteAllSeenModal(true)}
-                disabled={deletingAllSeen}
-              >
-                <FiTrash2 /> Delete Seen
-              </button>
-            )}
-          </div>
-        )}
-
         <button 
           onClick={handleRefresh} 
           className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
@@ -290,16 +224,65 @@ const AllItemsView = ({ onUpdate }) => {
         </button>
       </div>
 
-      <div className="filters-bar">
+      {/* Stats Cards - Modern, card-based design */}
+      <div className="stats-grid">
+        <div className="stat-card total">
+          <div className="stat-icon">
+            <FiBarChart2 />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Total Items</span>
+            <span className="stat-value">{stats?.totalSaves || 0}</span>
+          </div>
+        </div>
+
+        <div className="stat-card seen">
+          <div className="stat-icon">
+            <FiEye />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Seen</span>
+            <span className="stat-value">{stats?.seenSaves || 0}</span>
+            <span className="stat-percent">{seenPercentage}%</span>
+          </div>
+        </div>
+
+        <div className="stat-card favorites">
+          <div className="stat-icon">
+            <FiHeart />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Favorites</span>
+            <span className="stat-value">{stats?.favoriteSaves || 0}</span>
+            <span className="stat-percent">{favoritePercentage}%</span>
+          </div>
+        </div>
+
+        {settings.showDuplicates && duplicateCount > 0 && (
+          <div className="stat-card duplicates">
+            <div className="stat-icon">
+              <FiCopy />
+            </div>
+            <div className="stat-content">
+              <span className="stat-label">Duplicates</span>
+              <span className="stat-value">{duplicateCount}</span>
+              <span className="stat-percent">{duplicatePercentage}%</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Filters Section - Clean and intuitive */}
+      <div className="filters-section">
         <button 
-          className="filter-toggle"
+          className="filter-toggle-btn"
           onClick={() => setShowFilters(!showFilters)}
         >
           <FiFilter />
-          Filters
+          <span>Filters</span>
           {showFilters ? <FiChevronUp /> : <FiChevronDown />}
         </button>
-        
+
         {showFilters && (
           <div className="filters-panel">
             <div className="search-box">
@@ -310,25 +293,38 @@ const AllItemsView = ({ onUpdate }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>            
-            <div className="seen-filter">
+              {searchTerm && (
+                <button 
+                  className="clear-search"
+                  onClick={() => setSearchTerm('')}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            <div className="filter-group">
               <label>Status:</label>
               <select 
                 value={filterSeen} 
                 onChange={(e) => setFilterSeen(e.target.value)}
+                className="filter-select"
               >
-                <option value="all">All</option>
-                <option value="seen">Seen</option>
-                <option value="unseen">Unseen</option>
+                <option value="all">All items</option>
+                <option value="seen">Seen only</option>
+                <option value="unseen">Unseen only</option>
               </select>
-              <span style={{ fontSize: '12px', color: '#65676b', marginLeft: '8px' }}>
-                (unseen by default)
-              </span>
+            </div>
+
+            <div className="filter-info">
+              <FiEyeOff className="info-icon" />
+              <span>Showing <strong>{filterSeen === 'unseen' ? 'unseen' : filterSeen === 'seen' ? 'seen' : 'all'}</strong> items</span>
             </div>
           </div>
         )}
       </div>
 
+      {/* Batch Actions */}
       <BatchActionBar
         items={filteredItems.map(item => ({
           save: item.save || item,
@@ -339,31 +335,32 @@ const AllItemsView = ({ onUpdate }) => {
         onComplete={handleRefresh}
       />
 
+      {/* Items Grid */}
       {filteredItems.length === 0 ? (
-        <div className="empty-state">
-          {searchTerm || filterSeen !== 'all' ? (
-            <div>
-              <p>No items match your filters</p>
-              <button 
-                className="clear-filters-btn"
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterSeen('unseen');
-                }}
-              >
-                Clear Filters
-              </button>
-            </div>
-          ) : (
-            <>
-              <p>No saved items found. Upload your Facebook data to get started.</p>
-              {settings.showDuplicates && duplicateCount > 0 && (
-                <p className="duplicate-note">
-                  <FiCopy /> {duplicateCount} duplicate items are hidden. 
-                  Enable "Show Duplicates" in settings to view them.
-                </p>
-              )}
-            </>
+        <div className="empty-state enhanced">
+          <div className="empty-icon">📦</div>
+          <h3>No items found</h3>
+          <p>
+            {searchTerm || filterSeen !== 'all' 
+              ? 'Try adjusting your filters'
+              : 'Upload your Facebook data to get started'}
+          </p>
+          {(searchTerm || filterSeen !== 'all') && (
+            <button 
+              className="clear-filters-btn"
+              onClick={() => {
+                setSearchTerm('');
+                setFilterSeen('unseen');
+              }}
+            >
+              Clear All Filters
+            </button>
+          )}
+          {!settings.showDuplicates && duplicateCount > 0 && (
+            <p className="duplicate-note">
+              <FiCopy /> {duplicateCount} duplicate items are hidden. 
+              Enable "Show Duplicates" in settings to view them.
+            </p>
           )}
         </div>
       ) : (
@@ -379,7 +376,7 @@ const AllItemsView = ({ onUpdate }) => {
           }
           endMessage={
             <div className="end-message">
-              <p>You've seen all your saved items! 🎉</p>
+              <p>✨ You've seen all your saved items!</p>
             </div>
           }
         >
@@ -397,15 +394,6 @@ const AllItemsView = ({ onUpdate }) => {
           </div>
         </InfiniteScroll>
       )}
-
-      <DeleteModal
-        isOpen={showDeleteAllSeenModal}
-        onClose={() => setShowDeleteAllSeenModal(false)}
-        onConfirm={handleDeleteAllSeen}
-        title="Delete All Seen Items"
-        message="Are you sure you want to delete all items you've marked as seen?"
-        itemCount={stats?.seenSaves || 0}
-      />
     </div>
   );
 };

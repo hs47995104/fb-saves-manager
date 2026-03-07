@@ -1,4 +1,4 @@
-/* frontend/src/index.css - Updated Facebook-like styles */
+/* frontend/src/index.css - Complete with dark mode support */
 
 * {
     margin: 0;
@@ -10,31 +10,208 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: #f0f2f5;
-    color: #1c1e21;
+    background: var(--fb-bg);
+    color: var(--fb-text);
+    transition: background-color 0.3s ease, color 0.2s ease;
 }
 
 #root {
     min-height: 100vh;
 }
 
-/* Facebook blue color variables */
+/* Light mode (default) */
 :root {
     --fb-blue: #1877f2;
     --fb-blue-hover: #166fe5;
+    --fb-blue-light: #e7f3ff;
     --fb-green: #42b72a;
     --fb-green-hover: #36a420;
+    --fb-green-light: #e6f7e6;
+    --fb-red: #fa383e;
+    --fb-red-light: #ffebe9;
+    --fb-red-hover: #e03137;
+    
     --fb-bg: #f0f2f5;
     --fb-card-bg: #ffffff;
     --fb-text: #1c1e21;
     --fb-text-secondary: #65676b;
+    --fb-text-tertiary: #8a8d91;
+    
     --fb-border: #e4e6eb;
     --fb-divider: #ced0d4;
     --fb-hover: #f2f2f2;
+    --fb-hover-dark: #e4e6eb;
+    
     --fb-positive: #31a24c;
+    --fb-positive-light: #e6f7e6;
     --fb-negative: #fa383e;
+    --fb-negative-light: #ffebe9;
+    --fb-warning: #856404;
+    --fb-warning-light: #fff3cd;
+    --fb-warning-border: #ffd966;
+    --fb-info: #1877f2;
+    --fb-info-light: #e7f3ff;
+    --fb-success: #1e7e34;
+    --fb-success-light: #e6f7e6;
+    --fb-success-border: #9fd79f;
+    
+    --fb-shadow: rgba(0, 0, 0, 0.1);
+    --fb-shadow-hover: rgba(0, 0, 0, 0.2);
+    --fb-shadow-strong: rgba(0, 0, 0, 0.3);
+    
+    --fb-input-bg: #f0f2f5;
+    --fb-input-border: #e4e6eb;
+    --fb-input-focus: #ffffff;
+    --fb-input-disabled: #f5f6f7;
+    
+    --fb-tag-bg: #e7f3ff;
+    --fb-tag-text: #1877f2;
+    --fb-tag-hover: #d4e6ff;
+    
+    --fb-overlay: rgba(255, 255, 255, 0.8);
+    --fb-overlay-dark: rgba(0, 0, 0, 0.5);
+    
+    --fb-scrollbar-track: #f0f2f5;
+    --fb-scrollbar-thumb: #bcc0c4;
+    --fb-scrollbar-thumb-hover: #9a9ea3;
+    
+    --fb-header-bg: #ffffff;
+    --fb-footer-bg: #ffffff;
+    --fb-sidebar-bg: #ffffff;
+    
+    --fb-modal-overlay: rgba(255, 255, 255, 0.8);
+    --fb-modal-bg: #ffffff;
+    --fb-modal-border: #e4e6eb;
+    
+    --fb-dropdown-bg: #ffffff;
+    --fb-dropdown-hover: #f0f2f5;
+    --fb-dropdown-border: #e4e6eb;
+    
+    --fb-toast-bg: #ffffff;
+    --fb-toast-text: #1c1e21;
+    --fb-toast-border: #e4e6eb;
+    
+    --fb-loader-color: #1877f2;
+    --fb-loader-track: #e4e6eb;
+    
+    --fb-icon-color: #65676b;
+    --fb-icon-hover: #1877f2;
+    
+    --fb-link-color: #1877f2;
+    --fb-link-hover: #166fe5;
+    
+    --fb-code-bg: #f0f2f5;
+    --fb-code-text: #1c1e21;
+    --fb-code-border: #e4e6eb;
 }
 
+/* Dark mode */
+.dark-mode {
+    --fb-blue: #3a8cff;
+    --fb-blue-hover: #5c9cff;
+    --fb-blue-light: rgba(58, 140, 255, 0.2);
+    --fb-green: #4cd137;
+    --fb-green-hover: #44bd32;
+    --fb-green-light: rgba(76, 209, 55, 0.2);
+    --fb-red: #ff4d4d;
+    --fb-red-light: rgba(255, 77, 77, 0.2);
+    --fb-red-hover: #ff6666;
+    
+    --fb-bg: #1a1b1e;
+    --fb-card-bg: #242526;
+    --fb-text: #e4e6eb;
+    --fb-text-secondary: #b0b3b8;
+    --fb-text-tertiary: #8a8d91;
+    
+    --fb-border: #3e4042;
+    --fb-divider: #3e4042;
+    --fb-hover: #3a3b3c;
+    --fb-hover-dark: #4e4f50;
+    
+    --fb-positive: #4cd137;
+    --fb-positive-light: rgba(76, 209, 55, 0.2);
+    --fb-negative: #ff4d4d;
+    --fb-negative-light: rgba(255, 77, 77, 0.2);
+    --fb-warning: #ffd966;
+    --fb-warning-light: #332e1a;
+    --fb-warning-border: #665d33;
+    --fb-info: #6bb5ff;
+    --fb-info-light: #1a2a33;
+    --fb-success: #9fd79f;
+    --fb-success-light: #1a332a;
+    --fb-success-border: #2d664d;
+    
+    --fb-shadow: rgba(0, 0, 0, 0.3);
+    --fb-shadow-hover: rgba(0, 0, 0, 0.5);
+    --fb-shadow-strong: rgba(0, 0, 0, 0.6);
+    
+    --fb-input-bg: #3a3b3c;
+    --fb-input-border: #4e4f50;
+    --fb-input-focus: #4a4b4c;
+    --fb-input-disabled: #2d2e30;
+    
+    --fb-tag-bg: rgba(58, 140, 255, 0.2);
+    --fb-tag-text: #6bb5ff;
+    --fb-tag-hover: rgba(58, 140, 255, 0.3);
+    
+    --fb-overlay: rgba(0, 0, 0, 0.8);
+    --fb-overlay-dark: rgba(0, 0, 0, 0.9);
+    
+    --fb-scrollbar-track: #2d2e30;
+    --fb-scrollbar-thumb: #5e6063;
+    --fb-scrollbar-thumb-hover: #7a7c80;
+    
+    --fb-header-bg: #242526;
+    --fb-footer-bg: #242526;
+    --fb-sidebar-bg: #242526;
+    
+    --fb-modal-overlay: rgba(0, 0, 0, 0.8);
+    --fb-modal-bg: #242526;
+    --fb-modal-border: #3e4042;
+    
+    --fb-dropdown-bg: #242526;
+    --fb-dropdown-hover: #3a3b3c;
+    --fb-dropdown-border: #3e4042;
+    
+    --fb-toast-bg: #242526;
+    --fb-toast-text: #e4e6eb;
+    --fb-toast-border: #3e4042;
+    
+    --fb-loader-color: #3a8cff;
+    --fb-loader-track: #3a3b3c;
+    
+    --fb-icon-color: #b0b3b8;
+    --fb-icon-hover: #6bb5ff;
+    
+    --fb-link-color: #6bb5ff;
+    --fb-link-hover: #8ac4ff;
+    
+    --fb-code-bg: #2d2e30;
+    --fb-code-text: #e4e6eb;
+    --fb-code-border: #3e4042;
+}
+
+/* Smooth transitions for theme switching */
+* {
+    transition: background-color 0.2s ease, 
+                border-color 0.2s ease, 
+                box-shadow 0.2s ease,
+                color 0.2s ease,
+                opacity 0.2s ease,
+                fill 0.2s ease,
+                stroke 0.2s ease;
+}
+
+/* Disable transitions for certain elements to prevent performance issues */
+.fb-spinner,
+.spinner,
+.loading-indicator .spin,
+.no-transition,
+.no-transition * {
+    transition: none !important;
+}
+
+/* Animations */
 @keyframes fb-fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
@@ -45,12 +222,206 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* Facebook loading spinner */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Spinner */
 .fb-spinner {
-    border: 3px solid rgba(0, 0, 0, 0.1);
-    border-top: 3px solid var(--fb-blue);
+    border: 3px solid var(--fb-loader-track);
+    border-top: 3px solid var(--fb-loader-color);
     border-radius: 50%;
     width: 36px;
     height: 36px;
     animation: fb-spin 1s linear infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--fb-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--fb-scrollbar-thumb);
+    border-radius: 6px;
+    border: 3px solid var(--fb-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--fb-scrollbar-thumb-hover);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--fb-scrollbar-thumb) var(--fb-scrollbar-track);
+}
+
+/* Selection styling */
+::selection {
+    background: var(--fb-blue);
+    color: white;
+}
+
+::-moz-selection {
+    background: var(--fb-blue);
+    color: white;
+}
+
+/* Focus outline */
+:focus {
+    outline: 2px solid var(--fb-blue);
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid var(--fb-blue);
+    outline-offset: 2px;
+}
+
+/* Link styling */
+a {
+    color: var(--fb-link-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: var(--fb-link-hover);
+    text-decoration: underline;
+}
+
+/* Code styling */
+code {
+    background: var(--fb-code-bg);
+    color: var(--fb-code-text);
+    border: 1px solid var(--fb-code-border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+/* Horizontal rule */
+hr {
+    border: none;
+    border-top: 1px solid var(--fb-divider);
+    margin: 1rem 0;
+}
+
+/* Text colors */
+.text-primary { color: var(--fb-blue); }
+.text-success { color: var(--fb-green); }
+.text-danger { color: var(--fb-red); }
+.text-warning { color: var(--fb-warning); }
+.text-info { color: var(--fb-info); }
+.text-muted { color: var(--fb-text-secondary); }
+
+/* Background colors */
+.bg-primary { background: var(--fb-blue); }
+.bg-success { background: var(--fb-green); }
+.bg-danger { background: var(--fb-red); }
+.bg-warning { background: var(--fb-warning-light); }
+.bg-info { background: var(--fb-info-light); }
+.bg-muted { background: var(--fb-hover); }
+
+/* Border colors */
+.border-primary { border-color: var(--fb-blue); }
+.border-success { border-color: var(--fb-green); }
+.border-danger { border-color: var(--fb-red); }
+.border-warning { border-color: var(--fb-warning-border); }
+.border-info { border-color: var(--fb-info); }
+.border-muted { border-color: var(--fb-border); }
+
+/* Utility classes */
+.fade-in {
+    animation: fb-fadeIn 0.3s ease;
+}
+
+.slide-down {
+    animation: slideDown 0.3s ease;
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease;
+}
+
+.slide-right {
+    animation: slideInRight 0.3s ease;
+}
+
+.spin {
+    animation: fb-spin 1s linear infinite;
+}
+
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Responsive text */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        background: white;
+        color: black;
+    }
+    
+    a {
+        color: black;
+        text-decoration: underline;
+    }
 }

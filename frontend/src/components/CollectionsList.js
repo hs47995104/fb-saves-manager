@@ -1,3 +1,5 @@
+// frontend/src/components/CollectionsList.js - Redesigned version
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -18,7 +20,9 @@ import {
   FiFolder,
   FiEye,
   FiHeart,
-  FiCopy
+  FiCopy,
+  FiGrid,
+  FiChevronRight
 } from 'react-icons/fi';
 import './Styles.css';
 
@@ -39,7 +43,6 @@ const CollectionsList = ({ refreshTrigger }) => {
       const { duplicateMap } = detectDuplicates(collectionsData, settings);
       setDuplicateMap(duplicateMap);
       window.__duplicateMap = duplicateMap;
-      console.log('Duplicates detected:', duplicateMap.size);
     }
   }, [settings]);
 
@@ -57,7 +60,6 @@ const CollectionsList = ({ refreshTrigger }) => {
       setError(null);
       setLoading(true);
       const response = await getAllItems();
-      console.log('Collections loaded:', response.data.length);
       setCollections(response.data || []);
       
       detectAndSetDuplicates(response.data || []);
@@ -94,6 +96,11 @@ const CollectionsList = ({ refreshTrigger }) => {
   }, [refreshTrigger]);
 
   const duplicateCount = Array.from(duplicateMap.values()).filter(d => d.isDuplicate).length;
+  
+  // Calculate percentages
+  const seenPercentage = stats ? Math.round((stats.seenSaves / (stats.totalSaves || 1)) * 100) : 0;
+  const favoritePercentage = stats ? Math.round(((stats.favoriteSaves || 0) / (stats.totalSaves || 1)) * 100) : 0;
+  const duplicatePercentage = stats ? Math.round((duplicateCount / (stats.totalSaves || 1)) * 100) : 0;
 
   if (loading) {
     return (
@@ -118,46 +125,14 @@ const CollectionsList = ({ refreshTrigger }) => {
 
   return (
     <div className="collections-container">
-      <div className="collections-header">
-        <h1>Your Collections</h1>
+      {/* Header Section */}
+      <div className="page-header">
+        <div className="header-title-section">
+          <FiGrid className="header-icon" />
+          <h1>Your Collections</h1>
+          <span className="total-count">{stats?.totalCollections || 0} collections</span>
+        </div>
         
-        {stats && (
-          <div className="stats-bar">
-            <div className="stat">
-              <FiFolder />
-              <span>Collections: {stats.totalCollections}</span>
-            </div>
-            <div className="stat">
-              <FiBarChart2 />
-              <span>Total Items: {stats.totalSaves}</span>
-            </div>
-            <div className="stat">
-              <FiEye />
-              <span>Seen: {stats.seenSaves}</span>
-              <span className="stat-percent">
-                ({Math.round((stats.seenSaves / (stats.totalSaves || 1)) * 100)}%)
-              </span>
-            </div>
-            <div className="stat" style={{ color: '#e74c3c' }}>
-              <FiHeart />
-              <span>Favorites: {stats.favoriteSaves || 0}</span>
-              <span className="stat-percent">
-                ({Math.round(((stats.favoriteSaves || 0) / (stats.totalSaves || 1)) * 100)}%)
-              </span>
-            </div>
-            
-            {settings.showDuplicates && duplicateCount > 0 && (
-              <div className="stat duplicate-stat">
-                <FiCopy />
-                <span>Duplicates: {duplicateCount}</span>
-                <span className="stat-percent">
-                  ({Math.round((duplicateCount / (stats.totalSaves || 1)) * 100)}%)
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
         <button 
           onClick={handleRefresh} 
           className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
@@ -168,44 +143,125 @@ const CollectionsList = ({ refreshTrigger }) => {
         </button>
       </div>
 
+      {/* Stats Cards */}
+      {stats && (
+        <div className="stats-grid">
+          <div className="stat-card total">
+            <div className="stat-icon">
+              <FiFolder />
+            </div>
+            <div className="stat-content">
+              <span className="stat-label">Collections</span>
+              <span className="stat-value">{stats.totalCollections}</span>
+            </div>
+          </div>
+
+          <div className="stat-card total-items">
+            <div className="stat-icon">
+              <FiBarChart2 />
+            </div>
+            <div className="stat-content">
+              <span className="stat-label">Total Items</span>
+              <span className="stat-value">{stats.totalSaves}</span>
+            </div>
+          </div>
+
+          <div className="stat-card seen">
+            <div className="stat-icon">
+              <FiEye />
+            </div>
+            <div className="stat-content">
+              <span className="stat-label">Seen</span>
+              <span className="stat-value">{stats.seenSaves}</span>
+              <span className="stat-percent">{seenPercentage}%</span>
+            </div>
+          </div>
+
+          <div className="stat-card favorites">
+            <div className="stat-icon">
+              <FiHeart />
+            </div>
+            <div className="stat-content">
+              <span className="stat-label">Favorites</span>
+              <span className="stat-value">{stats.favoriteSaves || 0}</span>
+              <span className="stat-percent">{favoritePercentage}%</span>
+            </div>
+          </div>
+
+          {settings.showDuplicates && duplicateCount > 0 && (
+            <div className="stat-card duplicates">
+              <div className="stat-icon">
+                <FiCopy />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Duplicates</span>
+                <span className="stat-value">{duplicateCount}</span>
+                <span className="stat-percent">{duplicatePercentage}%</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Batch Actions */}
       <BatchCollectionActions
         collections={collections}
         onComplete={handleRefresh}
       />
 
-      <div className="collections-grid">
-        {collections.length === 0 ? (
-          <div className="empty-state">
-            <FiFolder size={48} />
-            <h3>No collections found</h3>
-            <p>Upload your Facebook data to get started</p>
-            <button 
-              className="upload-btn"
-              onClick={() => navigate('/upload')}
-            >
-              Upload Data
-            </button>
+      {/* Collections Grid */}
+      {collections.length === 0 ? (
+        <div className="empty-state enhanced">
+          <div className="empty-icon">📁</div>
+          <h3>No collections yet</h3>
+          <p>Upload your Facebook data to get started</p>
+          <button 
+            className="primary-btn"
+            onClick={() => navigate('/upload')}
+          >
+            Upload Data
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="collections-grid">
+            {collections.map((collection) => (
+              <CollectionCard
+                key={collection.fbid || collection._id}
+                collection={collection}
+                onCollectionClick={handleCollectionClick}
+                onDelete={async (collection) => {
+                  try {
+                    await deleteCollection(collection.fbid);
+                    toast.success(`Deleted collection: ${collection.title}`);
+                    await fetchCollections();
+                  } catch (error) {
+                    toast.error(error.message || 'Failed to delete collection');
+                  }
+                }}
+                onUpdate={handleRefresh}
+              />
+            ))}
           </div>
-        ) : (
-          collections.map((collection) => (
-            <CollectionCard
-              key={collection.fbid || collection._id}
-              collection={collection}
-              onCollectionClick={handleCollectionClick}
-              onDelete={async (collection) => {
-                try {
-                  await deleteCollection(collection.fbid);
-                  toast.success(`Deleted collection: ${collection.title}`);
-                  await fetchCollections();
-                } catch (error) {
-                  toast.error(error.message || 'Failed to delete collection');
-                }
-              }}
-              onUpdate={handleRefresh}
-            />
-          ))
-        )}
-      </div>
+          
+          {/* Quick stats footer */}
+          <div className="collections-footer">
+            <div className="footer-stats">
+              <span>
+                <strong>{stats?.totalSaves || 0}</strong> total items
+              </span>
+              <span className="separator">•</span>
+              <span>
+                <strong>{stats?.totalCollections || 0}</strong> collections
+              </span>
+              <span className="separator">•</span>
+              <span>
+                <strong>{Math.round((stats?.totalSaves || 0) / (stats?.totalCollections || 1))}</strong> avg items per collection
+              </span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

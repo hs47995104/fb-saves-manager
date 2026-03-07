@@ -7,7 +7,8 @@ import {
   FiSquare,
   FiUsers,
   FiCalendar,
-  FiHash
+  FiHash,
+  FiBarChart2
 } from 'react-icons/fi';
 import { useSelection } from '../contexts/SelectionContext';
 import DeleteModal from './DeleteModal';
@@ -90,26 +91,26 @@ const CollectionCard = ({
             <FiTrash2 />
           </button>
         </div>
-        
+
         <div className="collection-stats">
           <div className="stat-item">
-            <FiHash />
+            <FiBarChart2 size={14} />
             <span>{collection.saves?.length || 0} items</span>
           </div>
           
           <div className="stat-item">
-            <FiCalendar />
+            <FiCalendar size={14} />
             <span>{formatDate(collection.timestamp)}</span>
           </div>
           
           {collection.participants?.length > 0 && (
             <div className="stat-item">
-              <FiUsers />
-              <span>{collection.participants.length} participants</span>
+              <FiUsers size={14} />
+              <span>{collection.participants.length}</span>
             </div>
           )}
         </div>
-        
+
         {collection.description && (
           <p className="collection-description" title={collection.description}>
             {collection.description.length > 100 

@@ -1,4 +1,4 @@
-// frontend/src/components/SeenRecentlyView.js - Complete version
+// frontend/src/components/SeenRecentlyView.js - Redesigned version
 
 import React, { useState, useEffect, useCallback } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -15,12 +15,16 @@ import {
   FiRefreshCw,
   FiCalendar,
   FiArrowLeft,
-  FiBarChart2
+  FiBarChart2,
+  FiTrash2,
+  FiTrendingUp,
+  FiActivity
 } from 'react-icons/fi';
-import { getRecentlySeen } from '../api';
+import { getRecentlySeen, deleteAllSeen } from '../api';
 import { useSelection } from '../contexts/SelectionContext';
 import ItemCard from './ItemCard';
 import BatchActionBar from './BatchActionBar';
+import DeleteModal from './DeleteModal';
 import './Styles.css';
 
 const SeenRecentlyView = ({ onUpdate }) => {
@@ -35,8 +39,10 @@ const SeenRecentlyView = ({ onUpdate }) => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [dateRange, setDateRange] = useState('all'); // today, week, month, all
+  const [dateRange, setDateRange] = useState('all');
   const [stats, setStats] = useState({ total: 0, today: 0, week: 0, month: 0 });
+  const [showDeleteAllSeenModal, setShowDeleteAllSeenModal] = useState(false);
+  const [deletingAllSeen, setDeletingAllSeen] = useState(false);
 
   const fetchSeenItems = useCallback(async (pageNum, append = false) => {
     try {
@@ -79,6 +85,26 @@ const SeenRecentlyView = ({ onUpdate }) => {
     }
   }, [clearSelection, items]);
 
+  const handleDeleteAllSeen = async () => {
+    setDeletingAllSeen(true);
+    try {
+      const response = await deleteAllSeen();
+      
+      if (response.data.success) {
+        toast.success(`Deleted ${response.data.totalDeleted} seen items`);
+        setShowDeleteAllSeenModal(false);
+        clearSelection();
+        await handleRefresh();
+      } else {
+        toast.error(response.data.error || 'Failed to delete seen items');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete seen items');
+    } finally {
+      setDeletingAllSeen(false);
+    }
+  };
+
   const loadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
@@ -90,44 +116,7 @@ const SeenRecentlyView = ({ onUpdate }) => {
     setPage(1);
     clearSelection();
     await fetchSeenItems(1, false);
-  };
-
-  const handleItemUpdate = async () => {
-    setRefreshing(true);
-    try {
-      setPage(1);
-      await fetchSeenItems(1, false);
-      if (onUpdate) onUpdate();
-    } catch (error) {
-      console.error('Error refreshing after update:', error);
-      toast.error('Failed to refresh data');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const formatLastSeen = (lastSeenAt) => {
-    if (!lastSeenAt) return 'Unknown';
-    
-    const date = new Date(lastSeenAt);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (onUpdate) onUpdate();
   };
 
   const filterByDateRange = (itemsToFilter) => {
@@ -170,6 +159,62 @@ const SeenRecentlyView = ({ onUpdate }) => {
     });
   };
 
+  const groupItemsByDate = (itemsToGroup) => {
+    const groups = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    itemsToGroup.forEach(item => {
+      if (!item.lastSeenAt) return;
+      
+      const date = new Date(item.lastSeenAt);
+      date.setHours(0, 0, 0, 0);
+      
+      let groupKey;
+      if (date.getTime() === today.getTime()) {
+        groupKey = 'today';
+      } else if (date.getTime() === yesterday.getTime()) {
+        groupKey = 'yesterday';
+      } else {
+        groupKey = date.toISOString().split('T')[0];
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          label: groupKey === 'today' ? 'Today' : 
+                 groupKey === 'yesterday' ? 'Yesterday' : 
+                 new Date(groupKey).toLocaleDateString('en-US', { 
+                   weekday: 'long', 
+                   year: 'numeric', 
+                   month: 'long', 
+                   day: 'numeric' 
+                 }),
+          items: []
+        };
+      }
+      groups[groupKey].items.push(item);
+    });
+    
+    // Sort groups by date (most recent first)
+    const sortedGroups = {};
+    const groupKeys = Object.keys(groups).sort((a, b) => {
+      if (a === 'today') return -1;
+      if (b === 'today') return 1;
+      if (a === 'yesterday') return -1;
+      if (b === 'yesterday') return 1;
+      return new Date(b) - new Date(a);
+    });
+    
+    groupKeys.forEach(key => {
+      sortedGroups[key] = groups[key];
+    });
+    
+    return sortedGroups;
+  };
+
   const getFilteredItems = () => {
     let filtered = items;
     filtered = filterByDateRange(filtered);
@@ -182,43 +227,6 @@ const SeenRecentlyView = ({ onUpdate }) => {
   }, []);
 
   const filteredItems = getFilteredItems();
-
-  // Group items by date for display
-  const groupItemsByDate = (itemsToGroup) => {
-    const groups = {};
-    
-    itemsToGroup.forEach(item => {
-      if (!item.lastSeenAt) return;
-      
-      const date = new Date(item.lastSeenAt);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      let groupKey;
-      
-      if (date.toDateString() === today.toDateString()) {
-        groupKey = 'Today';
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        groupKey = 'Yesterday';
-      } else {
-        groupKey = date.toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        });
-      }
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(item);
-    });
-    
-    return groups;
-  };
-
   const groupedItems = groupItemsByDate(filteredItems);
 
   if (loading) {
@@ -244,52 +252,94 @@ const SeenRecentlyView = ({ onUpdate }) => {
 
   return (
     <div className="seen-recently-view">
-      <div className="list-header">
+      {/* Header Section */}
+      <div className="page-header">
         <div className="header-left">
           <button className="back-btn" onClick={() => navigate('/')}>
             <FiArrowLeft /> Back
           </button>
-          <h1>
-            <FiEye style={{ marginRight: '12px', color: '#1877f2' }} />
-            Seen Recently
-          </h1>
+          <div className="header-title-section">
+            <FiEye className="header-icon" />
+            <h1>Seen Recently</h1>
+            <span className="total-count">{stats.total} items</span>
+          </div>
         </div>
         
-        <div className="stats-bar">
-          <div className="stat" title="Total seen items">
-            <FiBarChart2 />
-            <span>Total: {stats.total}</span>
+        <div className="header-actions">
+          {stats.total > 0 && (
+            <button
+              className="delete-seen-btn"
+              onClick={() => setShowDeleteAllSeenModal(true)}
+              disabled={deletingAllSeen}
+            >
+              <FiTrash2 /> Delete All
+            </button>
+          )}
+          <button 
+            onClick={handleRefresh} 
+            className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
+            disabled={refreshing}
+          >
+            <FiRefreshCw className={refreshing ? 'spin' : ''} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card total">
+          <div className="stat-icon">
+            <FiActivity />
           </div>
-          <div className="stat" title="Seen today">
-            <FiClock />
-            <span>Today: {stats.today}</span>
-          </div>
-          <div className="stat" title="Seen this week">
-            <FiCalendar />
-            <span>This week: {stats.week}</span>
+          <div className="stat-content">
+            <span className="stat-label">Total Seen</span>
+            <span className="stat-value">{stats.total}</span>
           </div>
         </div>
 
-        <button 
-          onClick={handleRefresh} 
-          className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
-          disabled={refreshing}
-        >
-          <FiRefreshCw className={refreshing ? 'spin' : ''} />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
+        <div className="stat-card today">
+          <div className="stat-icon">
+            <FiClock />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Today</span>
+            <span className="stat-value">{stats.today}</span>
+          </div>
+        </div>
+
+        <div className="stat-card week">
+          <div className="stat-icon">
+            <FiTrendingUp />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">This Week</span>
+            <span className="stat-value">{stats.week}</span>
+          </div>
+        </div>
+
+        <div className="stat-card month">
+          <div className="stat-icon">
+            <FiCalendar />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">This Month</span>
+            <span className="stat-value">{stats.month}</span>
+          </div>
+        </div>
       </div>
 
-      <div className="filters-bar">
+      {/* Filters Section */}
+      <div className="filters-section">
         <button 
-          className="filter-toggle"
+          className="filter-toggle-btn"
           onClick={() => setShowFilters(!showFilters)}
         >
           <FiFilter />
-          Filters
+          <span>Filters</span>
           {showFilters ? <FiChevronUp /> : <FiChevronDown />}
         </button>
-        
+
         {showFilters && (
           <div className="filters-panel">
             <div className="search-box">
@@ -299,11 +349,18 @@ const SeenRecentlyView = ({ onUpdate }) => {
                 placeholder="Search in seen items..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
               />
+              {searchTerm && (
+                <button 
+                  className="clear-search"
+                  onClick={() => setSearchTerm('')}
+                >
+                  ×
+                </button>
+              )}
             </div>
-            
-            <div className="date-filter">
+
+            <div className="filter-group">
               <label>Time range:</label>
               <select 
                 value={dateRange} 
@@ -320,6 +377,7 @@ const SeenRecentlyView = ({ onUpdate }) => {
         )}
       </div>
 
+      {/* Batch Actions */}
       <BatchActionBar
         items={filteredItems.map(item => ({
           save: item.save || item,
@@ -330,14 +388,15 @@ const SeenRecentlyView = ({ onUpdate }) => {
         onComplete={handleRefresh}
       />
 
+      {/* Items by Date Groups */}
       {filteredItems.length === 0 ? (
-        <div className="empty-state">
-          <FiEye size={48} style={{ color: '#ddd' }} />
+        <div className="empty-state enhanced">
+          <div className="empty-icon">👁️</div>
           <h3>No seen items found</h3>
           <p>
             {searchTerm || dateRange !== 'all' 
-              ? 'No items match your filters' 
-              : 'Mark items as seen to see them here'}
+              ? 'Try adjusting your filters'
+              : 'Mark items as seen to track your viewing history'}
           </p>
           {(searchTerm || dateRange !== 'all') && (
             <button 
@@ -347,7 +406,7 @@ const SeenRecentlyView = ({ onUpdate }) => {
                 setDateRange('all');
               }}
             >
-              Clear Filters
+              Clear All Filters
             </button>
           )}
         </div>
@@ -364,38 +423,46 @@ const SeenRecentlyView = ({ onUpdate }) => {
           }
           endMessage={
             <div className="end-message">
-              <p>You've reached the end of your seen history 🎉</p>
+              <p>✨ You've reached the end of your seen history</p>
             </div>
           }
-          scrollableTarget="scrollable-content"
         >
-          <div id="scrollable-content">
-            {Object.entries(groupedItems).map(([date, dateItems]) => (
-              <div key={date} className="date-group">
-                <div className="date-header">
+          {Object.entries(groupedItems).map(([key, group]) => (
+            <div key={key} className="date-group">
+              <div className="date-header modern">
+                <div className="date-badge">
                   <FiCalendar className="date-icon" />
-                  <h3>{date}</h3>
-                  <span className="date-count">
-                    {dateItems.length} item{dateItems.length !== 1 ? 's' : ''}
-                  </span>
+                  <h3>{group.label}</h3>
                 </div>
-                <div className="items-grid">
-                  {dateItems.map((item, index) => (
-                    <ItemCard
-                      key={`${item.parentFbid}-${item.saveIndex}-${index}`}
-                      item={item.save}
-                      parentId={item.parentFbid || item.parentId}
-                      parentTitle={item.parentTitle}
-                      saveIndex={item.saveIndex}
-                      onUpdate={handleItemUpdate}
-                    />
-                  ))}
-                </div>
+                <span className="date-count">
+                  {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                </span>
               </div>
-            ))}
-          </div>
+              <div className="items-grid">
+                {group.items.map((item, index) => (
+                  <ItemCard
+                    key={`${item.parentFbid}-${item.saveIndex}-${index}`}
+                    item={item.save}
+                    parentId={item.parentFbid || item.parentId}
+                    parentTitle={item.parentTitle}
+                    saveIndex={item.saveIndex}
+                    onUpdate={handleRefresh}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </InfiniteScroll>
       )}
+
+      <DeleteModal
+        isOpen={showDeleteAllSeenModal}
+        onClose={() => setShowDeleteAllSeenModal(false)}
+        onConfirm={handleDeleteAllSeen}
+        title="Delete All Seen Items"
+        message={`Are you sure you want to delete all ${stats.total} seen items? This action cannot be undone.`}
+        itemCount={stats.total}
+      />
     </div>
   );
 };

@@ -1,3 +1,4 @@
+<!-- frontend/public/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,5 +10,22 @@
 </head>
 <body>
     <div id="root"></div>
+    <script>
+        // Check for saved theme or system preference on initial load
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('fbSavesTheme');
+                if (savedTheme === 'dark') {
+                    document.documentElement.classList.add('dark-mode');
+                } else if (savedTheme === 'light') {
+                    document.documentElement.classList.remove('dark-mode');
+                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark-mode');
+                }
+            } catch (e) {
+                console.error('Failed to apply theme', e);
+            }
+        })();
+    </script>
 </body>
 </html>
