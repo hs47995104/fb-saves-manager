@@ -1,15 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const Collection = require('../models/SavedItem');
+const authMiddleware = require('../middleware/auth');
 
-// ============= TAG ROUTES =============
-
-// Get all unique tags across all items
-router.get('/all', async (req, res) => {
+// Get all unique tags for the current user
+router.get('/all', authMiddleware, async (req, res) => {
   try {
-    const collections = await Collection.find({}, { saves: 1 });
+    const collections = await Collection.find(
+      { userId: req.userId }, 
+      { saves: 1 }
+    );
     
-    const tagMap = new Map(); // Use Map to store unique tags with their counts
+    const tagMap = new Map();
     
     collections.forEach(collection => {
       if (collection.saves && Array.isArray(collection.saves)) {
@@ -35,7 +37,6 @@ router.get('/all', async (req, res) => {
       }
     });
     
-    // Convert Map to array and sort by count (most popular first)
     const tags = Array.from(tagMap.values()).sort((a, b) => b.count - a.count);
     
     res.json({
@@ -49,11 +50,9 @@ router.get('/all', async (req, res) => {
 });
 
 // Add a tag to a specific save item
-router.post('/add', async (req, res) => {
+router.post('/add', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex, tag } = req.body;
-    
-    console.log('Adding tag:', { collectionId, saveIndex, tag });
     
     if (!collectionId || saveIndex === undefined || !tag) {
       return res.status(400).json({ error: 'Collection ID, save index, and tag are required' });
@@ -63,7 +62,10 @@ router.post('/add', async (req, res) => {
       return res.status(400).json({ error: 'Tag name is required' });
     }
     
-    const collection = await Collection.findOne({ fbid: collectionId });
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: collectionId 
+    });
     
     if (!collection) {
       return res.status(404).json({ error: 'Collection not found' });
@@ -73,12 +75,10 @@ router.post('/add', async (req, res) => {
       return res.status(404).json({ error: 'Save item not found' });
     }
     
-    // Initialize tags array if it doesn't exist
     if (!collection.saves[saveIndex].tags) {
       collection.saves[saveIndex].tags = [];
     }
     
-    // Check if tag already exists (case insensitive)
     const tagExists = collection.saves[saveIndex].tags.some(
       t => t.name.toLowerCase() === tag.name.toLowerCase()
     );
@@ -87,7 +87,6 @@ router.post('/add', async (req, res) => {
       return res.status(400).json({ error: 'Tag already exists on this item' });
     }
     
-    // Add the new tag
     const newTag = {
       name: tag.name.toLowerCase().trim(),
       color: tag.color || '#3498db'
@@ -111,17 +110,18 @@ router.post('/add', async (req, res) => {
 });
 
 // Remove a tag from a specific save item
-router.delete('/remove', async (req, res) => {
+router.delete('/remove', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex, tagName } = req.body;
-    
-    console.log('Removing tag:', { collectionId, saveIndex, tagName });
     
     if (!collectionId || saveIndex === undefined || !tagName) {
       return res.status(400).json({ error: 'Collection ID, save index, and tag name are required' });
     }
     
-    const collection = await Collection.findOne({ fbid: collectionId });
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: collectionId 
+    });
     
     if (!collection) {
       return res.status(404).json({ error: 'Collection not found' });
@@ -135,7 +135,6 @@ router.delete('/remove', async (req, res) => {
       return res.status(404).json({ error: 'No tags found on this item' });
     }
     
-    // Filter out the tag (case insensitive)
     const originalLength = collection.saves[saveIndex].tags.length;
     collection.saves[saveIndex].tags = collection.saves[saveIndex].tags.filter(
       t => t.name.toLowerCase() !== tagName.toLowerCase()
@@ -160,8 +159,8 @@ router.delete('/remove', async (req, res) => {
   }
 });
 
-// Update tag color (for all instances of a tag)
-router.patch('/color', async (req, res) => {
+// Update tag color
+router.patch('/color', authMiddleware, async (req, res) => {
   try {
     const { tagName, color } = req.body;
     
@@ -169,8 +168,8 @@ router.patch('/color', async (req, res) => {
       return res.status(400).json({ error: 'Tag name and color are required' });
     }
     
-    // Find all collections that have this tag
     const collections = await Collection.find({
+      userId: req.userId,
       'saves.tags.name': tagName.toLowerCase()
     });
     
@@ -211,13 +210,14 @@ router.patch('/color', async (req, res) => {
 });
 
 // Get items by tag
-router.get('/items/:tagName', async (req, res) => {
+router.get('/items/:tagName', authMiddleware, async (req, res) => {
   try {
     const { tagName } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     
     const collections = await Collection.find({
+      userId: req.userId,
       'saves.tags.name': tagName.toLowerCase()
     });
     
@@ -240,7 +240,6 @@ router.get('/items/:tagName', async (req, res) => {
       }
     });
     
-    // Paginate
     const total = items.length;
     const start = (page - 1) * limit;
     const paginatedItems = items.slice(start, start + limit);

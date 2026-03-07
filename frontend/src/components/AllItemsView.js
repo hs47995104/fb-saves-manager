@@ -19,6 +19,7 @@ import {
   FiRefreshCw, 
   FiTrash2,
   FiEye,
+  FiEyeOff,
   FiChevronDown,
   FiChevronUp,
   FiSearch,
@@ -46,7 +47,7 @@ const AllItemsView = ({ onUpdate }) => {
   const [deletingAllSeen, setDeletingAllSeen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSeen, setFilterSeen] = useState('all');
+  const [filterSeen, setFilterSeen] = useState('unseen');
   const [showFilters, setShowFilters] = useState(false);
 
   const detectAndSetDuplicates = useCallback((collectionsData) => {
@@ -249,6 +250,13 @@ const AllItemsView = ({ onUpdate }) => {
               </span>
             </div>
             
+            {/* Note about default unseen filter */}
+            <div className="stat" style={{ color: '#1877f2', background: '#e7f3ff', padding: '4px 12px', borderRadius: '20px' }}>
+              <FiEyeOff />
+              <span>Showing unseen by default</span>
+            </div>
+            
+            {/* Duplicate stats - only show if duplicates are enabled in settings */}
             {settings.showDuplicates && duplicateCount > 0 && (
               <div className="stat duplicate-stat">
                 <FiCopy />
@@ -259,6 +267,7 @@ const AllItemsView = ({ onUpdate }) => {
               </div>
             )}
             
+            {/* Delete Seen button - only show if there are seen items */}
             {stats.seenSaves > 0 && (
               <button
                 className="delete-seen-btn"
@@ -301,8 +310,7 @@ const AllItemsView = ({ onUpdate }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-            
+            </div>            
             <div className="seen-filter">
               <label>Status:</label>
               <select 
@@ -313,6 +321,9 @@ const AllItemsView = ({ onUpdate }) => {
                 <option value="seen">Seen</option>
                 <option value="unseen">Unseen</option>
               </select>
+              <span style={{ fontSize: '12px', color: '#65676b', marginLeft: '8px' }}>
+                (unseen by default)
+              </span>
             </div>
           </div>
         )}
@@ -337,7 +348,7 @@ const AllItemsView = ({ onUpdate }) => {
                 className="clear-filters-btn"
                 onClick={() => {
                   setSearchTerm('');
-                  setFilterSeen('all');
+                  setFilterSeen('unseen');
                 }}
               >
                 Clear Filters

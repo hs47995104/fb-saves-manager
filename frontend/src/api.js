@@ -12,7 +12,12 @@ const api = axios.create({
   maxBodyLength: Infinity
 });
 
+// Add token to requests if it exists
 api.interceptors.request.use(request => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    request.headers.Authorization = `Bearer ${token}`;
+  }
   console.log('Starting Request:', request.method, request.url);
   return request;
 });
@@ -21,6 +26,14 @@ api.interceptors.response.use(
   response => response,
   error => {
     console.error('API Error:', error);
+    
+    // Handle authentication errors
+    if (error.response && error.response.status === 401) {
+      // Clear token and redirect to login
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      return Promise.reject(new Error('Session expired. Please login again.'));
+    }
     
     if (error.code === 'ECONNABORTED') {
       return Promise.reject(new Error('Request timeout. The file might be too large.'));
@@ -508,6 +521,17 @@ export const updateComment = async (collectionId, saveIndex, commentIndex, text)
     return response;
   } catch (error) {
     console.error('API: Error updating comment:', error);
+    throw error;
+  }
+};
+
+// Get recently seen items
+export const getRecentlySeen = async (page = 1, limit = 50) => {
+  try {
+    const response = await api.get(`/items/saves/seen/recent?page=${page}&limit=${limit}`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching recently seen items:', error);
     throw error;
   }
 };

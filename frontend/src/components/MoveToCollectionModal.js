@@ -185,7 +185,7 @@ const MoveToCollectionModal = ({
             Cancel
           </button>
           <button 
-            className="move-btn" 
+            className="fb-button-primary move-btn" 
             onClick={handleMove}
             disabled={!selectedCollection || loading}
           >

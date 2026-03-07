@@ -7,9 +7,10 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 
 // Import routes
+const authRouter = require('./routes/auth');
 const itemsRouter = require('./routes/items');
-const tagsRouter = require('./routes/tags');      // Add this
-const commentsRouter = require('./routes/comments'); // Add this
+const tagsRouter = require('./routes/tags');
+const commentsRouter = require('./routes/comments');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -38,7 +39,7 @@ app.use(cors(corsOptions));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
-  skip: (req) => req.path === '/api/items/upload' // Skip rate limit for uploads
+  skip: (req) => req.path === '/api/items/upload' || req.path.startsWith('/api/auth')
 });
 
 app.use('/api/', limiter);
@@ -49,7 +50,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check - place this before API routes
+// Health check
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -58,10 +59,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
+// Test route to verify server is running
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working!' });
+});
+
+// API Routes - MAKE SURE THESE ARE CORRECT
+app.use('/api/auth', authRouter);
 app.use('/api/items', itemsRouter);
-app.use('/api/tags', tagsRouter);        // Add this line
-app.use('/api/comments', commentsRouter); // Add this line
+app.use('/api/tags', tagsRouter);
+app.use('/api/comments', commentsRouter);
 
 // 404 handler for any unmatched routes
 app.use((req, res) => {
@@ -90,12 +97,9 @@ app.use((err, req, res, next) => {
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  // Add these options
   autoIndex: true,
-  // Force UTF-8 encoding
   retryWrites: true,
-  // Ensure we're using UTF-8
-  family: 4 // Use IPv4, skip IPv6
+  family: 4
 })
 .then(() => {
   console.log('✅ Connected to MongoDB');
@@ -103,8 +107,8 @@ mongoose.connect(process.env.MONGODB_URI, {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`📍 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
     console.log(`📍 API URL: http://localhost:${PORT}/api`);
-    console.log(`📍 Tags API: http://localhost:${PORT}/api/tags`);
-    console.log(`📍 Comments API: http://localhost:${PORT}/api/comments`);
+    console.log(`📍 Auth URL: http://localhost:${PORT}/api/auth`);
+    console.log(`📍 Test URL: http://localhost:${PORT}/api/test`);
   });
 })
 .catch(err => {

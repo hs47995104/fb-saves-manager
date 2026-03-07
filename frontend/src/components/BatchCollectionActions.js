@@ -88,9 +88,7 @@ const BatchCollectionActions = ({
       for (const item of selectedList) {
         if (item.type === 'collection') {
           try {
-            console.log('Deleting collection:', item.fbid, item.title);
             const response = await deleteCollection(item.fbid);
-            console.log('Delete collection response:', response.data);
             if (response.data.success) {
               deletedCount++;
             } else {
@@ -98,7 +96,6 @@ const BatchCollectionActions = ({
               errorMessages.push(`"${item.title}": ${response.data.error || 'Unknown error'}`);
             }
           } catch (error) {
-            console.error(`Failed to delete collection ${item.title}:`, error);
             errorCount++;
             errorMessages.push(`"${item.title}": ${error.message}`);
           }
@@ -121,7 +118,6 @@ const BatchCollectionActions = ({
       clearSelection();
       if (onComplete) onComplete();
     } catch (error) {
-      console.error('Bulk delete error:', error);
       toast.error(error.message || 'Failed to delete collections');
     } finally {
       setLoading(false);

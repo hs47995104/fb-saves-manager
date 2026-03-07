@@ -18,7 +18,7 @@ const AuthorSchema = new mongoose.Schema({
 // Schema for tags
 const TagSchema = new mongoose.Schema({
   name: { type: String, required: true, lowercase: true, trim: true },
-  color: { type: String, default: '#3498db' } // Optional color for UI
+  color: { type: String, default: '#3498db' }
 }, { _id: false });
 
 // Schema for comments
@@ -28,70 +28,56 @@ const CommentSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { _id: false });
 
-// Schema for a single saved item (video, post, reel, etc.)
+// Schema for a single saved item
 const SavedItemSchema = new mongoose.Schema({
   url: { type: String, required: true },
   href: String,
   name: String,
   title: String,
   seen: { type: Boolean, default: false },
+  lastSeenAt: { type: Date, default: null },
   favorite: { type: Boolean, default: false },
-  // Group info if it's a group post
   group: {
     name: String
   },
-  // Author info if available
   author: {
     name: String
   },
-  // Tags for this item
   tags: [TagSchema],
-  // Comments for this item
   comments: [CommentSchema],
-  // Keep track of all original data for this save
   originalData: mongoose.Schema.Types.Mixed,
-  // Add a unique identifier for the item
-  itemId: { type: String, unique: true, sparse: true }
+  itemId: { type: String, sparse: true }
 }, { _id: false });
 
 // Main schema for a collection of saved items
 const CollectionSchema = new mongoose.Schema({
-  // Basic info
-  timestamp: { type: Number, required: true },
-  fbid: { type: String, required: true, unique: true },
+  userId: { type: String, required: true, index: true }, // Add userId field
   
-  // Collection metadata from label_values
+  timestamp: { type: Number, required: true },
+  fbid: { type: String, required: true },
+  
   title: { type: String, required: true },
   description: String,
   lastUpdated: Number,
   
-  // Participants in this collection
   participants: [String],
-  
-  // The actual saved items
   saves: [SavedItemSchema],
-  
-  // Cover photo info (if any)
   coverPhoto: mongoose.Schema.Types.Mixed,
-  
-  // Keep the entire original document for reference
   rawData: mongoose.Schema.Types.Mixed,
   
-  // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
-// Indexes for better query performance
-CollectionSchema.index({ fbid: 1 });
-CollectionSchema.index({ timestamp: -1 });
-CollectionSchema.index({ 'saves.url': 1 });
-CollectionSchema.index({ title: 'text' });
-CollectionSchema.index({ 'saves.itemId': 1 });
-CollectionSchema.index({ timestamp: -1, 'saves.seen': 1 });
-CollectionSchema.index({ 'saves.favorite': 1, timestamp: -1 });
-CollectionSchema.index({ title: 'text', 'saves.title': 'text' });
-CollectionSchema.index({ 'saves.tags.name': 1 }); // Index for tag search
-CollectionSchema.index({ 'saves.comments.text': 'text' }); // Text index for comment search
+// Compound index to ensure unique fbid per user
+CollectionSchema.index({ userId: 1, fbid: 1 }, { unique: true });
+
+// Other indexes
+CollectionSchema.index({ userId: 1, timestamp: -1 });
+CollectionSchema.index({ userId: 1, 'saves.url': 1 });
+CollectionSchema.index({ userId: 1, title: 'text' });
+CollectionSchema.index({ userId: 1, 'saves.favorite': 1 });
+CollectionSchema.index({ userId: 1, 'saves.tags.name': 1 });
+CollectionSchema.index({ userId: 1, 'saves.seen': 1, 'saves.lastSeenAt': -1 });
 
 module.exports = mongoose.model('Collection', CollectionSchema);

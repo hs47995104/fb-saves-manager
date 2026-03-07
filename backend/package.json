@@ -12,13 +12,15 @@
     "fix-encoding:dry": "node scripts/fixEncoding.js --dry-run"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "mongoose": "^7.5.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "helmet": "^7.0.0",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.7.4",
-    "express-rate-limit": "^6.10.0"
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "express-rate-limit": "^6.11.2",
+    "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^7.8.9"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

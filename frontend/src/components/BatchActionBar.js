@@ -211,7 +211,7 @@ const BatchActionBar = ({
 
   if (!selectionMode || getSelectedCount() === 0) {
     return showSelectAll && items.length > 0 ? (
-      <div className="batch-action-bar minimal">
+      <div className="batch-actions-bar minimal">
         <button 
           className="select-all-btn"
           onClick={handleSelectAll}
@@ -224,7 +224,7 @@ const BatchActionBar = ({
 
   return (
     <>
-      <div className="batch-action-bar active">
+      <div className="batch-actions-bar active">
         <div className="selection-info">
           <button 
             className="select-toggle"

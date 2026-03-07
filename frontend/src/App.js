@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import PrivateRoute from './components/PrivateRoute';
+import Login from './components/Auth/Login';
+import Register from './components/Auth/Register';
 import Uploader from './components/Uploader';
 import CollectionsList from './components/CollectionsList';
 import CollectionView from './components/CollectionView';
@@ -11,13 +15,54 @@ import AllItemsView from './components/AllItemsView';
 import FavoritesView from './components/FavoritesView';
 import TagsView from './components/TagsView';
 import SettingsModal from './components/SettingsModal';
-import { FiSettings } from 'react-icons/fi';
+import SeenRecentlyView from './components/SeenRecentlyView';
+import { 
+  FiHome, 
+  FiBookmark, 
+  FiHeart,
+  FiEye, 
+  FiTag, 
+  FiUpload,
+  FiSettings,
+  FiLogOut,
+  FiUser,
+  FiMenu,
+  FiX
+} from 'react-icons/fi';
 import './App.css';
+import './components/Styles.css';
 
-function App() {
+// Create a wrapper component that uses useLocation
+function AppContentWithRouter() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState('collections');
   const [showSettings, setShowSettings] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const { user, logout } = useAuth();
+
+  // Update active tab based on current route
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/collections' || path === '/') {
+      setActiveTab('collections');
+    } else if (path === '/all-items') {
+      setActiveTab('all-items');
+    } else if (path === '/seen-recently') {
+      setActiveTab('seen-recently');
+    } else if (path === '/favorites') {
+      setActiveTab('favorites');
+    } else if (path === '/tags') {
+      setActiveTab('tags');
+    } else if (path === '/upload') {
+      setActiveTab('upload');
+    } else if (path.startsWith('/collection/')) {
+      setActiveTab('collections');
+    }
+    
+    // Close mobile menu on route change
+    setMobileMenuOpen(false);
+  }, [location]);
 
   const handleUploadSuccess = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -28,129 +73,190 @@ function App() {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const handleTabClick = (tabId, path) => {
+    setActiveTab(tabId);
+    window.location.href = path;
+    setMobileMenuOpen(false);
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const tabs = [
+    { id: 'collections', label: 'Collections', icon: <FiHome />, path: '/collections' },
+    { id: 'all-items', label: 'All Items', icon: <FiBookmark />, path: '/all-items' },
+    { id: 'seen-recently', label: 'Seen Recently', icon: <FiEye />, path: '/seen-recently' },
+    { id: 'favorites', label: 'Favorites', icon: <FiHeart />, path: '/favorites' },
+    { id: 'tags', label: 'Tags', icon: <FiTag />, path: '/tags' },
+    { id: 'upload', label: 'Upload', icon: <FiUpload />, path: '/upload' }
+  ];
+
   return (
-    <SettingsProvider>
-      <SelectionProvider>
-        <Router>
-          <div className="app">
-            <nav className="navbar">
-              <div className="navbar-content">
-                <div className="nav-brand">
-                  <h2>📚 Facebook Saves Manager</h2>
-                </div>
-                <div className="nav-tabs">
-                  <button
-                    className={`tab-btn ${activeTab === 'collections' ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveTab('collections');
-                      window.location.href = '/collections';
-                    }}
+    <SelectionProvider>
+      <SettingsProvider>
+        <div className="app">
+          <nav className="navbar">
+            <div className="navbar-content">
+              <div className="nav-brand">
+                <h2>saves</h2>
+                {user && (
+                  <button 
+                    className="mobile-menu-toggle"
+                    onClick={toggleMobileMenu}
+                    aria-label="Toggle menu"
                   >
-                    Collections
+                    {mobileMenuOpen ? <FiX /> : <FiMenu />}
                   </button>
-                  <button
-                    className={`tab-btn ${activeTab === 'all-items' ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveTab('all-items');
-                      window.location.href = '/all-items';
-                    }}
-                  >
-                    All Items
-                  </button>
-                  <button
-                    className={`tab-btn ${activeTab === 'favorites' ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveTab('favorites');
-                      window.location.href = '/favorites';
-                    }}
-                  >
-                    Favorites
-                  </button>
-                  <button
-                    className={`tab-btn ${activeTab === 'tags' ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveTab('tags');
-                      window.location.href = '/tags';
-                    }}
-                  >
-                    Tags
-                  </button>
-                  <button
-                    className={`tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveTab('upload');
-                      window.location.href = '/upload';
-                    }}
-                  >
-                    Upload Data
-                  </button>
-                </div>
-                <button
-                  className="settings-btn"
-                  onClick={() => setShowSettings(true)}
-                  title="Settings"
-                >
-                  <FiSettings />
-                </button>
+                )}
               </div>
-            </nav>
 
-            <main className="main-content">
-              <Routes>
-                <Route path="/" element={<Navigate to="/collections" replace />} />
-                <Route 
-                  path="/collections" 
-                  element={
-                    <CollectionsList 
-                      refreshTrigger={refreshTrigger} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/collection/:collectionId" 
-                  element={<CollectionView onUpdate={handleCollectionUpdate} />} 
-                />
-                <Route 
-                  path="/all-items" 
-                  element={<AllItemsView onUpdate={handleCollectionUpdate} />} 
-                />
-                <Route 
-                  path="/favorites" 
-                  element={<FavoritesView onUpdate={handleCollectionUpdate} />} 
-                />
-                <Route 
-                  path="/tags" 
-                  element={<TagsView onUpdate={handleCollectionUpdate} />} 
-                />
-                <Route 
-                  path="/upload" 
-                  element={<Uploader onUploadSuccess={handleUploadSuccess} />} 
-                />
-                <Route path="*" element={<Navigate to="/collections" replace />} />
-              </Routes>
-            </main>
+              {user && (
+                <div className={`nav-tabs ${mobileMenuOpen ? 'expanded' : ''}`}>
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                      onClick={() => handleTabClick(tab.id, tab.path)}
+                      title={tab.label}
+                    >
+                      <span className="tab-icon">{tab.icon}</span>
+                      <span className="tab-label">{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            <SettingsModal 
-              isOpen={showSettings} 
-              onClose={() => setShowSettings(false)} 
-            />
+              <div className="nav-right">
+                {user ? (
+                  <>
+                    <div className="user-info">
+                      <FiUser />
+                      <span className="username">{user.username}</span>
+                    </div>
+                    <button
+                      className="settings-btn"
+                      onClick={() => setShowSettings(true)}
+                      title="Settings"
+                    >
+                      <FiSettings />
+                    </button>
+                    <button
+                      className="logout-btn"
+                      onClick={logout}
+                      title="Logout"
+                    >
+                      <FiLogOut />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </nav>
 
-            <ToastContainer
-              position="bottom-right"
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-            />
-          </div>
-        </Router>
-      </SelectionProvider>
-    </SettingsProvider>
+          <main className="main-content">
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route 
+                path="/" 
+                element={
+                  <PrivateRoute>
+                    <Navigate to="/collections" replace />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/collections" 
+                element={
+                  <PrivateRoute>
+                    <CollectionsList refreshTrigger={refreshTrigger} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/collection/:collectionId" 
+                element={
+                  <PrivateRoute>
+                    <CollectionView onUpdate={handleCollectionUpdate} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/all-items" 
+                element={
+                  <PrivateRoute>
+                    <AllItemsView onUpdate={handleCollectionUpdate} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/seen-recently" 
+                element={
+                  <PrivateRoute>
+                    <SeenRecentlyView onUpdate={handleCollectionUpdate} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/favorites" 
+                element={
+                  <PrivateRoute>
+                    <FavoritesView onUpdate={handleCollectionUpdate} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/tags" 
+                element={
+                  <PrivateRoute>
+                    <TagsView onUpdate={handleCollectionUpdate} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/upload" 
+                element={
+                  <PrivateRoute>
+                    <Uploader onUploadSuccess={handleUploadSuccess} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route path="*" element={<Navigate to="/collections" replace />} />
+            </Routes>
+          </main>
+
+          <SettingsModal 
+            isOpen={showSettings} 
+            onClose={() => setShowSettings(false)} 
+          />
+
+          <ToastContainer
+            position="bottom-center"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+            toastClassName="fb-toast"
+          />
+        </div>
+      </SettingsProvider>
+    </SelectionProvider>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <AppContentWithRouter />
+      </AuthProvider>
+    </Router>
   );
 }
 

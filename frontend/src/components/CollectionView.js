@@ -34,7 +34,7 @@ const CollectionView = ({ onUpdate }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSeen, setFilterSeen] = useState('all');
+  const [filterSeen, setFilterSeen] = useState('unseen');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
@@ -308,7 +308,7 @@ const CollectionView = ({ onUpdate }) => {
                 className="clear-filters-btn"
                 onClick={() => {
                   setSearchTerm('');
-                  setFilterSeen('all');
+                  setFilterSeen('unseen');
                 }}
               >
                 Clear Filters

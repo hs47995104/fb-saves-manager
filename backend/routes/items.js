@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Collection = require('../models/SavedItem');
 const { parseSavedItems } = require('../utils/jsonParser');
+const authMiddleware = require('../middleware/auth');
 
 // ============= TEST ROUTE =============
 router.get('/test', (req, res) => {
@@ -11,18 +12,18 @@ router.get('/test', (req, res) => {
 // ============= GET ROUTES =============
 
 // Get all collections (paginated)
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const collections = await Collection.find()
+    const collections = await Collection.find({ userId: req.userId })
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(limit);
     
-    const total = await Collection.countDocuments();
+    const total = await Collection.countDocuments({ userId: req.userId });
 
     res.json({
       items: collections,
@@ -39,9 +40,10 @@ router.get('/', async (req, res) => {
 });
 
 // Get all collections (no pagination)
-router.get('/all', async (req, res) => {
+router.get('/all', authMiddleware, async (req, res) => {
   try {
-    const collections = await Collection.find().sort({ timestamp: -1 });
+    const collections = await Collection.find({ userId: req.userId })
+      .sort({ timestamp: -1 });
     res.json(collections);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -49,14 +51,17 @@ router.get('/all', async (req, res) => {
 });
 
 // Get simplified collections list for dropdowns
-router.get('/collections/simple', async (req, res) => {
+router.get('/collections/simple', authMiddleware, async (req, res) => {
   try {
-    const collections = await Collection.find({}, {
-      fbid: 1,
-      title: 1,
-      'saves': 1,
-      timestamp: 1
-    }).sort({ title: 1 });
+    const collections = await Collection.find(
+      { userId: req.userId },
+      {
+        fbid: 1,
+        title: 1,
+        'saves': 1,
+        timestamp: 1
+      }
+    ).sort({ title: 1 });
 
     const simplified = collections.map(c => ({
       fbid: c.fbid,
@@ -73,10 +78,10 @@ router.get('/collections/simple', async (req, res) => {
 });
 
 // Get stats
-router.get('/stats', async (req, res) => {
+router.get('/stats', authMiddleware, async (req, res) => {
   try {
-    const totalCollections = await Collection.countDocuments();
-    const collections = await Collection.find({}, { saves: 1 });
+    const totalCollections = await Collection.countDocuments({ userId: req.userId });
+    const collections = await Collection.find({ userId: req.userId }, { saves: 1 });
     
     let totalSaves = 0;
     let seenSaves = 0;
@@ -102,13 +107,13 @@ router.get('/stats', async (req, res) => {
 });
 
 // Get flattened saves with pagination
-router.get('/saves', async (req, res) => {
+router.get('/saves', authMiddleware, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const collections = await Collection.find({}).sort({ timestamp: -1 });
+    const collections = await Collection.find({ userId: req.userId }).sort({ timestamp: -1 });
 
     let allSaves = [];
     collections.forEach(collection => {
@@ -144,10 +149,62 @@ router.get('/saves', async (req, res) => {
   }
 });
 
+// Get recently seen items (ordered by lastSeenAt)
+router.get('/saves/seen/recent', authMiddleware, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const collections = await Collection.find({ userId: req.userId });
+
+    let seenItems = [];
+    collections.forEach(collection => {
+      if (collection.saves && Array.isArray(collection.saves)) {
+        collection.saves.forEach((save, index) => {
+          // Only include items that have been seen and have a lastSeenAt timestamp
+          if (save.seen && save.lastSeenAt) {
+            seenItems.push({
+              save: save,
+              parentFbid: collection.fbid,
+              parentId: collection.fbid,
+              parentTitle: collection.title,
+              parentTimestamp: collection.timestamp,
+              saveIndex: index,
+              lastSeenAt: save.lastSeenAt
+            });
+          }
+        });
+      }
+    });
+
+    // Sort by lastSeenAt (most recent first)
+    seenItems.sort((a, b) => {
+      return new Date(b.lastSeenAt) - new Date(a.lastSeenAt);
+    });
+
+    const total = seenItems.length;
+    const paginatedItems = seenItems.slice(skip, skip + limit);
+
+    res.json({
+      items: paginatedItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching recently seen items:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============= POST ROUTES (CREATE) =============
 
 // Upload endpoint
-router.post('/upload', async (req, res) => {
+router.post('/upload', authMiddleware, async (req, res) => {
   try {
     const { jsonData } = req.body;
     
@@ -163,14 +220,20 @@ router.post('/upload', async (req, res) => {
 
     for (const item of parsedItems) {
       try {
-        const existingItem = await Collection.findOne({ fbid: item.fbid });
+        // Check if collection exists for this user
+        const existingItem = await Collection.findOne({ 
+          userId: req.userId,
+          fbid: item.fbid 
+        });
         
         if (existingItem) {
-          // Preserve seen and favorite status
+          // Preserve seen, favorite, tags, and comments status
           const existingSavesMap = new Map(
             existingItem.saves.map(s => [s.url, { 
               seen: s.seen,
-              favorite: s.favorite || false 
+              favorite: s.favorite || false,
+              tags: s.tags || [],
+              comments: s.comments || []
             }])
           );
 
@@ -180,19 +243,21 @@ router.post('/upload', async (req, res) => {
               return { 
                 ...save, 
                 seen: existing.seen,
-                favorite: existing.favorite 
+                favorite: existing.favorite,
+                tags: existing.tags,
+                comments: existing.comments
               };
             }
             return save;
           });
 
           await Collection.updateOne(
-            { fbid: item.fbid },
-            { $set: { ...item, updatedAt: new Date() } }
+            { userId: req.userId, fbid: item.fbid },
+            { $set: { ...item, userId: req.userId, updatedAt: new Date() } }
           );
           updated++;
         } else {
-          await Collection.create(item);
+          await Collection.create({ ...item, userId: req.userId });
           imported++;
         }
       } catch (err) {
@@ -211,7 +276,7 @@ router.post('/upload', async (req, res) => {
 });
 
 // Create a new collection
-router.post('/collections', async (req, res) => {
+router.post('/collections', authMiddleware, async (req, res) => {
   try {
     const { title, description } = req.body;
     
@@ -223,6 +288,7 @@ router.post('/collections', async (req, res) => {
     const newFbid = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const newCollection = new Collection({
+      userId: req.userId,
       timestamp: Math.floor(Date.now() / 1000),
       fbid: newFbid,
       title: title,
@@ -247,7 +313,7 @@ router.post('/collections', async (req, res) => {
 });
 
 // Move an item from one collection to another
-router.post('/items/move', async (req, res) => {
+router.post('/items/move', authMiddleware, async (req, res) => {
   try {
     const { sourceCollectionId, targetCollectionId, saveIndex, itemId } = req.body;
     
@@ -257,9 +323,15 @@ router.post('/items/move', async (req, res) => {
       return res.status(400).json({ error: 'Source and target collection IDs are required' });
     }
 
-    // Find source and target collections
-    const sourceCollection = await Collection.findOne({ fbid: sourceCollectionId });
-    const targetCollection = await Collection.findOne({ fbid: targetCollectionId });
+    // Find source and target collections - verify they belong to the user
+    const sourceCollection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: sourceCollectionId 
+    });
+    const targetCollection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: targetCollectionId 
+    });
 
     if (!sourceCollection) {
       return res.status(404).json({ error: 'Source collection not found' });
@@ -336,8 +408,8 @@ router.post('/items/move', async (req, res) => {
   }
 });
 
-// Bulk delete saves (FIXED VERSION)
-router.post('/saves/bulk-delete', async (req, res) => {
+// Bulk delete saves
+router.post('/saves/bulk-delete', authMiddleware, async (req, res) => {
   try {
     const { items, collectionId, criteria, saveIds } = req.body;
     
@@ -367,7 +439,10 @@ router.post('/saves/bulk-delete', async (req, res) => {
 
       // Process each collection
       for (const [collId, collItems] of Object.entries(itemsByCollection)) {
-        const collection = await Collection.findOne({ fbid: collId });
+        const collection = await Collection.findOne({ 
+          userId: req.userId,
+          fbid: collId 
+        });
         
         if (!collection) {
           console.error(`Collection not found: ${collId}`);
@@ -404,7 +479,10 @@ router.post('/saves/bulk-delete', async (req, res) => {
     }
     // Handle saveIds + collectionId format (from DuplicateManager)
     else if (collectionId && saveIds && Array.isArray(saveIds)) {
-      const collection = await Collection.findOne({ fbid: collectionId });
+      const collection = await Collection.findOne({ 
+        userId: req.userId,
+        fbid: collectionId 
+      });
       
       if (!collection) {
         return res.status(404).json({ error: 'Collection not found' });
@@ -434,7 +512,7 @@ router.post('/saves/bulk-delete', async (req, res) => {
     } 
     else if (criteria) {
       // Handle criteria-based deletion (e.g., delete all seen)
-      const collections = await Collection.find({});
+      const collections = await Collection.find({ userId: req.userId });
       
       for (const collection of collections) {
         const originalLength = collection.saves.length;
@@ -486,8 +564,8 @@ router.post('/saves/bulk-delete', async (req, res) => {
 
 // ============= PATCH ROUTES (UPDATE) =============
 
-// Update seen status
-router.patch('/save/:itemId/:saveIndex/seen', async (req, res) => {
+// Update seen status (with lastSeenAt tracking)
+router.patch('/save/:itemId/:saveIndex/seen', authMiddleware, async (req, res) => {
   try {
     const { itemId, saveIndex } = req.params;
     const { seen } = req.body;
@@ -508,8 +586,12 @@ router.patch('/save/:itemId/:saveIndex/seen', async (req, res) => {
       return res.status(400).json({ error: 'Seen status must be a boolean' });
     }
 
-    // Find the collection
-    const collection = await Collection.findOne({ fbid: itemId });
+    // Find the collection - verify it belongs to the user
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: itemId 
+    });
+    
     if (!collection) {
       console.log('Collection not found with fbid:', itemId);
       return res.status(404).json({ error: 'Collection not found' });
@@ -531,8 +613,14 @@ router.patch('/save/:itemId/:saveIndex/seen', async (req, res) => {
       });
     }
 
-    // Update the save
+    // Update the save - set lastSeenAt when marking as seen
     collection.saves[index].seen = seen;
+    if (seen) {
+      collection.saves[index].lastSeenAt = new Date();
+    } else {
+      // Optionally clear lastSeenAt when marking as unseen
+      collection.saves[index].lastSeenAt = null;
+    }
     collection.updatedAt = new Date();
     
     // Mark this path as modified (helps with nested objects)
@@ -553,7 +641,7 @@ router.patch('/save/:itemId/:saveIndex/seen', async (req, res) => {
 });
 
 // Update favorite status
-router.patch('/save/:itemId/:saveIndex/favorite', async (req, res) => {
+router.patch('/save/:itemId/:saveIndex/favorite', authMiddleware, async (req, res) => {
   try {
     const { itemId, saveIndex } = req.params;
     const { favorite } = req.body;
@@ -574,8 +662,12 @@ router.patch('/save/:itemId/:saveIndex/favorite', async (req, res) => {
       return res.status(400).json({ error: 'Favorite status must be a boolean' });
     }
 
-    // Find the collection
-    const collection = await Collection.findOne({ fbid: itemId });
+    // Find the collection - verify it belongs to the user
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: itemId 
+    });
+    
     if (!collection) {
       console.log('Collection not found with fbid:', itemId);
       return res.status(404).json({ error: 'Collection not found' });
@@ -619,7 +711,7 @@ router.patch('/save/:itemId/:saveIndex/favorite', async (req, res) => {
 });
 
 // Bulk update seen status
-router.patch('/saves/seen/bulk', async (req, res) => {
+router.patch('/saves/seen/bulk', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndices, seen } = req.body;
     
@@ -629,17 +721,26 @@ router.patch('/saves/seen/bulk', async (req, res) => {
       return res.status(400).json({ error: 'Collection ID and save indices are required' });
     }
 
-    const collection = await Collection.findOne({ fbid: collectionId });
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: collectionId 
+    });
     
     if (!collection) {
       return res.status(404).json({ error: 'Collection not found' });
     }
 
     let updatedCount = 0;
+    const now = new Date();
     
     saveIndices.forEach(index => {
       if (index >= 0 && index < collection.saves.length) {
         collection.saves[index].seen = seen;
+        if (seen) {
+          collection.saves[index].lastSeenAt = now;
+        } else {
+          collection.saves[index].lastSeenAt = null;
+        }
         updatedCount++;
       }
     });
@@ -661,7 +762,7 @@ router.patch('/saves/seen/bulk', async (req, res) => {
 });
 
 // Bulk update favorite status
-router.patch('/saves/favorite/bulk', async (req, res) => {
+router.patch('/saves/favorite/bulk', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndices, favorite } = req.body;
     
@@ -671,7 +772,10 @@ router.patch('/saves/favorite/bulk', async (req, res) => {
       return res.status(400).json({ error: 'Collection ID and save indices are required' });
     }
 
-    const collection = await Collection.findOne({ fbid: collectionId });
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: collectionId 
+    });
     
     if (!collection) {
       return res.status(404).json({ error: 'Collection not found' });
@@ -703,14 +807,17 @@ router.patch('/saves/favorite/bulk', async (req, res) => {
 });
 
 // Update collection metadata
-router.patch('/collection/:itemId', async (req, res) => {
+router.patch('/collection/:itemId', authMiddleware, async (req, res) => {
   try {
     const { itemId } = req.params;
     const { title, description } = req.body;
     
     console.log('Updating collection:', { itemId, title, description });
 
-    const collection = await Collection.findOne({ fbid: itemId });
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: itemId 
+    });
     
     if (!collection) {
       return res.status(404).json({ error: 'Collection not found' });
@@ -739,10 +846,8 @@ router.patch('/collection/:itemId', async (req, res) => {
 
 // ============= DELETE ROUTES =============
 
-// ============= DELETE ROUTES =============
-
 // Delete a single save from a collection
-router.delete('/save/:itemId/:saveIndex', async (req, res) => {
+router.delete('/save/:itemId/:saveIndex', authMiddleware, async (req, res) => {
   try {
     const { itemId, saveIndex } = req.params;
     
@@ -759,8 +864,12 @@ router.delete('/save/:itemId/:saveIndex', async (req, res) => {
       return res.status(400).json({ error: 'Invalid save index' });
     }
 
-    // Find the collection
-    const collection = await Collection.findOne({ fbid: itemId });
+    // Find the collection - verify it belongs to the user
+    const collection = await Collection.findOne({ 
+      userId: req.userId,
+      fbid: itemId 
+    });
+    
     if (!collection) {
       return res.status(404).json({ error: 'Collection not found' });
     }
@@ -802,129 +911,12 @@ router.delete('/save/:itemId/:saveIndex', async (req, res) => {
   }
 });
 
-// Bulk delete saves (FIXED VERSION)
-router.post('/saves/bulk-delete', async (req, res) => {
+// Delete all seen saves across all collections for the current user
+router.delete('/saves/seen/all', authMiddleware, async (req, res) => {
   try {
-    const { items, collectionId, criteria } = req.body;
+    console.log('Deleting all seen saves for user:', req.userId);
     
-    console.log('Bulk deleting saves:', { items, collectionId, criteria });
-
-    let deletedCount = 0;
-    let modifiedCollections = [];
-
-    // Handle direct items array (from frontend)
-    if (items && Array.isArray(items)) {
-      console.log(`Processing ${items.length} items for bulk delete`);
-      
-      // Group items by collection for efficient processing
-      const itemsByCollection = {};
-      
-      items.forEach(item => {
-        if (!item.collectionId) {
-          console.error('Item missing collectionId:', item);
-          return;
-        }
-        
-        if (!itemsByCollection[item.collectionId]) {
-          itemsByCollection[item.collectionId] = [];
-        }
-        itemsByCollection[item.collectionId].push(item);
-      });
-
-      // Process each collection
-      for (const [collId, collItems] of Object.entries(itemsByCollection)) {
-        const collection = await Collection.findOne({ fbid: collId });
-        
-        if (!collection) {
-          console.error(`Collection not found: ${collId}`);
-          continue;
-        }
-
-        const originalLength = collection.saves.length;
-        
-        // Sort indices in descending order to remove from the end first
-        // This prevents index shifting issues when removing multiple items
-        const indicesToRemove = collItems
-          .map(item => item.saveIndex)
-          .filter(index => index !== undefined && index < collection.saves.length)
-          .sort((a, b) => b - a);
-        
-        // Remove items
-        indicesToRemove.forEach(index => {
-          collection.saves.splice(index, 1);
-          deletedCount++;
-        });
-
-        if (indicesToRemove.length > 0) {
-          collection.updatedAt = new Date();
-          await collection.save();
-          
-          modifiedCollections.push({
-            collectionId: collection.fbid,
-            title: collection.title,
-            deleted: indicesToRemove.length,
-            remaining: collection.saves.length
-          });
-        }
-      }
-    }
-    else if (collectionId && criteria) {
-      // Handle criteria-based deletion (existing code)
-      const collection = await Collection.findOne({ fbid: collectionId });
-      
-      if (!collection) {
-        return res.status(404).json({ error: 'Collection not found' });
-      }
-
-      const originalLength = collection.saves.length;
-      
-      // Apply deletion criteria
-      if (criteria.seen === true) {
-        collection.saves = collection.saves.filter(save => !save.seen);
-      }
-      if (criteria.urlPattern) {
-        const regex = new RegExp(criteria.urlPattern);
-        collection.saves = collection.saves.filter(save => !regex.test(save.url));
-      }
-      if (criteria.beforeTimestamp) {
-        collection.saves = collection.saves.filter(
-          save => !save.timestamp || save.timestamp > criteria.beforeTimestamp
-        );
-      }
-
-      const deleted = originalLength - collection.saves.length;
-      if (deleted > 0) {
-        deletedCount += deleted;
-        collection.updatedAt = new Date();
-        await collection.save();
-        
-        modifiedCollections.push({
-          collectionId: collection.fbid,
-          title: collection.title,
-          deleted,
-          remaining: collection.saves.length
-        });
-      }
-    }
-
-    res.json({
-      message: `Successfully deleted ${deletedCount} saves`,
-      success: true,
-      deletedCount,
-      modifiedCollections
-    });
-  } catch (error) {
-    console.error('Error in bulk delete:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Delete all seen saves across all collections
-router.delete('/saves/seen/all', async (req, res) => {
-  try {
-    console.log('Deleting all seen saves');
-    
-    const collections = await Collection.find({});
+    const collections = await Collection.find({ userId: req.userId });
     let totalDeleted = 0;
     let modifiedCollections = [];
 
@@ -965,7 +957,7 @@ router.delete('/saves/seen/all', async (req, res) => {
 });
 
 // Delete an entire collection
-router.delete('/collection/:itemId', async (req, res) => {
+router.delete('/collection/:itemId', authMiddleware, async (req, res) => {
   try {
     const { itemId } = req.params;
     
@@ -975,8 +967,11 @@ router.delete('/collection/:itemId', async (req, res) => {
       return res.status(400).json({ error: 'Collection ID is required' });
     }
 
-    // Find and delete the collection
-    const collection = await Collection.findOneAndDelete({ fbid: itemId });
+    // Find and delete the collection - verify it belongs to the user
+    const collection = await Collection.findOneAndDelete({ 
+      userId: req.userId,
+      fbid: itemId 
+    });
     
     if (!collection) {
       return res.status(404).json({ error: 'Collection not found' });
@@ -999,11 +994,14 @@ router.delete('/collection/:itemId', async (req, res) => {
   }
 });
 
-// Delete all items (for testing)
-router.delete('/all', async (req, res) => {
+// Delete all items for the current user (for testing)
+router.delete('/all', authMiddleware, async (req, res) => {
   try {
-    await Collection.deleteMany({});
-    res.json({ message: 'All collections deleted', success: true });
+    await Collection.deleteMany({ userId: req.userId });
+    res.json({ 
+      message: 'All collections deleted for user',
+      success: true 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

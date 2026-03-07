@@ -1,0 +1,145 @@
+/* frontend/src/components/Auth/Auth.css */
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fb-bg);
+  padding: 20px;
+}
+
+.auth-card {
+  background: var(--fb-card-bg);
+  border-radius: 8px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--fb-text);
+  margin-bottom: 8px;
+}
+
+.auth-header p {
+  color: var(--fb-text-secondary);
+  font-size: 15px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fb-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-group label svg {
+  color: var(--fb-blue);
+}
+
+.form-group input {
+  padding: 12px 16px;
+  border: 1px solid var(--fb-border);
+  border-radius: 6px;
+  font-size: 15px;
+  background: #f0f2f5;
+  transition: all 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  background: white;
+  border-color: var(--fb-blue);
+}
+
+.form-group input.error {
+  border-color: var(--fb-negative);
+  background: #ffebe9;
+}
+
+.error-message {
+  color: var(--fb-negative);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.auth-button {
+  background: var(--fb-blue);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
+  margin-top: 12px;
+}
+
+.auth-button:hover:not(:disabled) {
+  background: var(--fb-blue-hover);
+}
+
+.auth-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--fb-divider);
+}
+
+.auth-footer a {
+  color: var(--fb-blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Loading spinner for auth button */
+.auth-button .spin {
+  animation: fb-spin 1s linear infinite;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px;
+  }
+  
+  .auth-header h2 {
+    font-size: 24px;
+  }
+}

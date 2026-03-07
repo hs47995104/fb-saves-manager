@@ -1,3 +1,5 @@
+/* frontend/src/index.css - Updated Facebook-like styles */
+
 * {
     margin: 0;
     padding: 0;
@@ -5,58 +7,50 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-        sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background: #f0f2f5;
+    color: #1c1e21;
 }
 
 #root {
     min-height: 100vh;
 }
 
-/* Global animations */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* Facebook blue color variables */
+:root {
+    --fb-blue: #1877f2;
+    --fb-blue-hover: #166fe5;
+    --fb-green: #42b72a;
+    --fb-green-hover: #36a420;
+    --fb-bg: #f0f2f5;
+    --fb-card-bg: #ffffff;
+    --fb-text: #1c1e21;
+    --fb-text-secondary: #65676b;
+    --fb-border: #e4e6eb;
+    --fb-divider: #ced0d4;
+    --fb-hover: #f2f2f2;
+    --fb-positive: #31a24c;
+    --fb-negative: #fa383e;
 }
 
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+@keyframes fb-fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes spin {
+@keyframes fb-spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
 
-/* Loading spinner */
-.spinner {
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #1877f2;
+/* Facebook loading spinner */
+.fb-spinner {
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top: 3px solid var(--fb-blue);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 15px;
+    width: 36px;
+    height: 36px;
+    animation: fb-spin 1s linear infinite;
 }
