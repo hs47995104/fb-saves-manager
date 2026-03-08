@@ -1,4 +1,4 @@
-/* frontend/src/components/Header.css - Updated with dark mode */
+/* frontend/src/components/Header.css - Updated with mobile username capsule visibility */
 
 .app-header {
   position: sticky;
@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
   min-height: 64px;
 }
 
@@ -176,7 +176,7 @@
 /* User Menu */
 .user-menu-container {
   position: relative;
-  display: none;
+  display: block; /* Always visible on all screen sizes */
 }
 
 .user-menu-trigger {
@@ -212,11 +212,11 @@
 .user-name {
   font-weight: 500;
   font-size: 0.95rem;
-  max-width: 100px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: none;
+  display: inline; /* Always visible */
   color: var(--fb-text);
 }
 
@@ -224,7 +224,7 @@
   font-size: 1rem;
   color: var(--fb-text-secondary);
   transition: transform 0.2s;
-  display: none;
+  display: inline; /* Always visible */
 }
 
 .chevron.open {
@@ -362,7 +362,7 @@
   flex: 1;
 }
 
-/* Responsive */
+/* Responsive adjustments */
 @media (min-width: 768px) {
   .header-container {
     padding: 0.75rem 2rem;
@@ -378,18 +378,6 @@
 
   .brand-manager {
     font-size: 0.875rem;
-  }
-
-  .user-menu-container {
-    display: block;
-  }
-
-  .user-name {
-    display: inline;
-  }
-
-  .chevron {
-    display: inline;
   }
 }
 
@@ -425,10 +413,11 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 767px) {
   .header-container {
     padding: 0.5rem 1rem;
     min-height: 56px;
+    gap: 0.5rem;
   }
 
   .brand-icon {
@@ -454,9 +443,28 @@
     width: 32px;
     height: 32px;
   }
+  
+  .user-name {
+    max-width: 80px;
+    font-size: 0.85rem;
+  }
+  
+  .user-menu-trigger {
+    padding: 0.2rem 0.4rem 0.2rem 0.2rem;
+  }
 
   .mobile-nav-item {
     padding: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-name {
+    max-width: 60px;
+  }
+  
+  .user-menu-trigger {
+    gap: 0.25rem;
   }
 }
 
