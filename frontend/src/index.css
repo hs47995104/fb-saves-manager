@@ -103,6 +103,14 @@ body {
     --fb-code-bg: #f0f2f5;
     --fb-code-text: #1c1e21;
     --fb-code-border: #e4e6eb;
+    
+    /* Spacing tokens - REDUCED */
+    --space-xs: 2px;
+    --space-sm: 4px;
+    --space-md: 6px;
+    --space-lg: 8px;
+    --space-xl: 12px;
+    --space-2xl: 16px;
 }
 
 /* Dark mode */
@@ -203,7 +211,6 @@ body {
 }
 
 /* Disable transitions for certain elements to prevent performance issues */
-.fb-spinner,
 .spinner,
 .loading-indicator .spin,
 .no-transition,
@@ -213,7 +220,7 @@ body {
 
 /* Animations */
 @keyframes fb-fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
+    from { opacity: 0; transform: translateY(2px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -231,7 +238,7 @@ body {
 @keyframes slideDown {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateY(-5px);
     }
     to {
         opacity: 1;
@@ -242,7 +249,7 @@ body {
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(5px);
     }
     to {
         opacity: 1;
@@ -253,7 +260,7 @@ body {
 @keyframes slideInRight {
     from {
         opacity: 0;
-        transform: translateX(10px);
+        transform: translateX(5px);
     }
     to {
         opacity: 1;
@@ -261,20 +268,11 @@ body {
     }
 }
 
-/* Spinner */
-.fb-spinner {
-    border: 3px solid var(--fb-loader-track);
-    border-top: 3px solid var(--fb-loader-color);
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    animation: fb-spin 1s linear infinite;
-}
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -283,8 +281,8 @@ body {
 
 ::-webkit-scrollbar-thumb {
     background: var(--fb-scrollbar-thumb);
-    border-radius: 6px;
-    border: 3px solid var(--fb-scrollbar-track);
+    border-radius: 4px;
+    border: 2px solid var(--fb-scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -341,7 +339,7 @@ code {
     color: var(--fb-code-text);
     border: 1px solid var(--fb-code-border);
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 2px 4px;
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
 }
@@ -350,7 +348,7 @@ code {
 hr {
     border: none;
     border-top: 1px solid var(--fb-divider);
-    margin: 1rem 0;
+    margin: var(--space-md) 0;
 }
 
 /* Text colors */
@@ -379,19 +377,19 @@ hr {
 
 /* Utility classes */
 .fade-in {
-    animation: fb-fadeIn 0.3s ease;
+    animation: fb-fadeIn 0.2s ease;
 }
 
 .slide-down {
-    animation: slideDown 0.3s ease;
+    animation: slideDown 0.2s ease;
 }
 
 .slide-up {
-    animation: slideUp 0.3s ease;
+    animation: slideUp 0.2s ease;
 }
 
 .slide-right {
-    animation: slideInRight 0.3s ease;
+    animation: slideInRight 0.2s ease;
 }
 
 .spin {

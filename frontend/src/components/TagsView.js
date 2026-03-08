@@ -4,6 +4,7 @@ import { FiArrowLeft, FiHash, FiSearch, FiLoader, FiTag } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { getAllTags, getItemsByTag } from '../api';
 import ItemCard from './ItemCard';
+import { getDuplicateInfo } from '../utils/duplicateDetector';
 import './Styles.css';
 
 const TagsView = ({ onUpdate }) => {
@@ -118,7 +119,7 @@ const TagsView = ({ onUpdate }) => {
 
             {itemsLoading ? (
               <div className="items-loading">
-                <FiLoader className="spinner" />
+                <div className="spinner"></div>
                 <span>Loading items...</span>
               </div>
             ) : tagItems.length === 0 ? (
@@ -135,6 +136,12 @@ const TagsView = ({ onUpdate }) => {
                     parentTitle={item.parentTitle}
                     saveIndex={item.saveIndex}
                     onUpdate={handleItemUpdate}
+                    duplicateInfo={window.__duplicateMap ? getDuplicateInfo(
+                      item.parentFbid,
+                      item.saveIndex,
+                      window.__duplicateMap
+                    ) : null}
+                    duplicateMap={window.__duplicateMap}
                   />
                 ))}
               </div>

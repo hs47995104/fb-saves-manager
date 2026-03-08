@@ -1,3 +1,5 @@
+// frontend/src/components/SettingsModal.js - Fixed infinite loop issue
+
 import React, { useState, useEffect } from 'react';
 import { 
   FiX, 
@@ -17,32 +19,32 @@ import './Styles.css';
 const SettingsModal = ({ isOpen, onClose }) => {
   const { settings, updateSettings } = useSettings();
   const { user, updateUserSettings } = useAuth();
-  const [localSettings, setLocalSettings] = useState(settings);
+  const [localSettings, setLocalSettings] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState(null);
 
-  // Sync with user settings when modal opens or user changes
+  // Initialize local settings when modal opens
   useEffect(() => {
     if (isOpen) {
-      if (user?.settings) {
-        setLocalSettings(user.settings);
-        updateSettings(user.settings);
-      } else {
-        setLocalSettings(settings);
-      }
+      // Use user settings if available, otherwise use context settings
+      const initialSettings = user?.settings || settings;
+      setLocalSettings(initialSettings);
       setError(null);
+      setHasChanges(false);
     }
-  }, [isOpen, user, settings, updateSettings]);
+  }, [isOpen, user, settings]);
 
   // Track changes
   useEffect(() => {
-    const changed = JSON.stringify(localSettings) !== JSON.stringify(settings);
-    setHasChanges(changed);
+    if (localSettings && settings) {
+      const changed = JSON.stringify(localSettings) !== JSON.stringify(settings);
+      setHasChanges(changed);
+    }
   }, [localSettings, settings]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !localSettings) return null;
 
   const handleChange = (key, value) => {
     setLocalSettings(prev => ({
@@ -54,18 +56,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
 
   const handleCheckboxChange = (key) => (e) => {
     handleChange(key, e.target.checked);
-  };
-
-  const handleSelectChange = (key) => (e) => {
-    const value = Array.from(e.target.selectedOptions, option => option.value);
-    handleChange(key, value);
-  };
-
-  const handleNumberChange = (key) => (e) => {
-    const value = parseFloat(e.target.value);
-    if (!isNaN(value) && value >= 0 && value <= 1) {
-      handleChange(key, value);
-    }
   };
 
   const handleSave = async () => {
@@ -100,12 +90,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
   const handleReset = () => {
     const defaultSettings = {
       showDuplicates: false,
-      prioritizeBySize: true,
-      highlightDuplicates: true,
-      autoDetectDuplicates: true,
-      duplicateMatchFields: ['url', 'title', 'name'],
-      showDuplicateCount: true,
-      duplicateThreshold: 0.8
+      highlightDuplicates: true
     };
     setLocalSettings(defaultSettings);
     setError(null);
@@ -113,9 +98,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
   };
 
   const handleCancel = () => {
-    // Revert to saved settings
-    setLocalSettings(settings);
-    setError(null);
     onClose();
   };
 
@@ -131,7 +113,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
         </div>
 
         <div className="modal-body">
-          {/* User Info Section - Only show if user is logged in */}
           {user && (
             <div className="settings-section user-info-section">
               <h4>Account</h4>
@@ -158,7 +139,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
               <div className="setting-info">
                 <label>Show Duplicates</label>
                 <span className="setting-description">
-                  Display duplicate items in your collections
+                  Display duplicate items in your collections (based on URLs)
                 </span>
               </div>
               <label className="switch">
@@ -166,24 +147,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
                   type="checkbox"
                   checked={localSettings.showDuplicates}
                   onChange={handleCheckboxChange('showDuplicates')}
-                  disabled={saving}
-                />
-                <span className="slider round"></span>
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <div className="setting-info">
-                <label>Prioritize by Collection Size</label>
-                <span className="setting-description">
-                  Items in larger collections are considered originals
-                </span>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={localSettings.prioritizeBySize}
-                  onChange={handleCheckboxChange('prioritizeBySize')}
                   disabled={saving}
                 />
                 <span className="slider round"></span>
@@ -207,82 +170,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
                 <span className="slider round"></span>
               </label>
             </div>
-
-            <div className="setting-item">
-              <div className="setting-info">
-                <label>Show Duplicate Count</label>
-                <span className="setting-description">
-                  Display how many duplicates exist for each item
-                </span>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={localSettings.showDuplicateCount}
-                  onChange={handleCheckboxChange('showDuplicateCount')}
-                  disabled={saving}
-                />
-                <span className="slider round"></span>
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <div className="setting-info">
-                <label>Auto-detect Duplicates</label>
-                <span className="setting-description">
-                  Automatically detect duplicates when loading data
-                </span>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={localSettings.autoDetectDuplicates}
-                  onChange={handleCheckboxChange('autoDetectDuplicates')}
-                  disabled={saving}
-                />
-                <span className="slider round"></span>
-              </label>
-            </div>
-
-            <div className="setting-item field-selector">
-              <div className="setting-info">
-                <label>Match by Fields</label>
-                <span className="setting-description">
-                  Select which fields to use for duplicate detection
-                </span>
-              </div>
-              <select
-                multiple
-                value={localSettings.duplicateMatchFields}
-                onChange={handleSelectChange('duplicateMatchFields')}
-                className="field-select"
-                size="3"
-                disabled={saving}
-              >
-                <option value="url">URL</option>
-                <option value="title">Title</option>
-                <option value="name">Name</option>
-              </select>
-            </div>
-
-            <div className="setting-item">
-              <div className="setting-info">
-                <label>Duplicate Threshold</label>
-                <span className="setting-description">
-                  Similarity threshold for duplicate detection (0.0 - 1.0)
-                </span>
-              </div>
-              <input
-                type="number"
-                min="0"
-                max="1"
-                step="0.1"
-                value={localSettings.duplicateThreshold}
-                onChange={handleNumberChange('duplicateThreshold')}
-                className="threshold-input"
-                disabled={saving}
-              />
-            </div>
           </div>
 
           <div className="settings-section info-section">
@@ -291,11 +178,11 @@ const SettingsModal = ({ isOpen, onClose }) => {
               How Duplicate Detection Works
             </h4>
             <ul className="info-list">
-              <li>• Items are considered duplicates if they have matching URL, title, or name based on selected fields</li>
+              <li>• Items are considered duplicates if they have the same URL</li>
+              <li>• URLs are normalized (trailing slashes removed, tracking parameters ignored)</li>
               <li>• Collections with more items are prioritized as the source of truth</li>
               <li>• When "Show Duplicates" is OFF, only the original item appears in lists</li>
               <li>• When "Show Duplicates" is ON, duplicates are labeled with the source collection</li>
-              <li>• Duplicate badges show which collection contains the original item</li>
               <li>• Settings are saved to your account and synced across devices</li>
             </ul>
           </div>

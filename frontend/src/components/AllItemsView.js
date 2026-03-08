@@ -1,4 +1,4 @@
-// frontend/src/components/AllItemsView.js - Redesigned version
+// frontend/src/components/AllItemsView.js - Updated duplicate detection
 
 import React, { useState, useEffect, useCallback } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -10,9 +10,10 @@ import {
 } from '../api';
 import { useSelection } from '../contexts/SelectionContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { detectDuplicates, filterItemsByDuplicateSettings } from '../utils/duplicateDetector';
+import { detectDuplicates, filterItemsByDuplicateSettings, getDuplicateStats } from '../utils/duplicateDetector';
 import ItemCard from './ItemCard';
 import BatchActionBar from './BatchActionBar';
+import { getDuplicateInfo } from '../utils/duplicateDetector';
 import { 
   FiLoader, 
   FiBarChart2, 
@@ -36,6 +37,7 @@ const AllItemsView = ({ onUpdate }) => {
   const [collections, setCollections] = useState([]);
   const [stats, setStats] = useState(null);
   const [duplicateMap, setDuplicateMap] = useState(new Map());
+  const [duplicateStats, setDuplicateStats] = useState({ totalDuplicates: 0 });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -47,12 +49,16 @@ const AllItemsView = ({ onUpdate }) => {
   const [showFilters, setShowFilters] = useState(false);
 
   const detectAndSetDuplicates = useCallback((collectionsData) => {
-    if (settings.autoDetectDuplicates && collectionsData.length > 0) {
-      const { duplicateMap } = detectDuplicates(collectionsData, settings);
+    if (collectionsData.length > 0) {
+      const { duplicateMap } = detectDuplicates(collectionsData);
       setDuplicateMap(duplicateMap);
+      
+      const stats = getDuplicateStats(collectionsData, duplicateMap);
+      setDuplicateStats(stats);
+      
       window.__duplicateMap = duplicateMap;
     }
-  }, [settings]);
+  }, []);
 
   const fetchStats = async () => {
     try {
@@ -160,16 +166,16 @@ const AllItemsView = ({ onUpdate }) => {
       });
     }
     
-    filtered = filterItemsByDuplicateSettings(filtered, duplicateMap, settings);
+    filtered = filterItemsByDuplicateSettings(filtered, duplicateMap, settings.showDuplicates);
     
     return filtered;
-  }, [items, searchTerm, filterSeen, duplicateMap, settings]);
+  }, [items, searchTerm, filterSeen, duplicateMap, settings.showDuplicates]);
 
   useEffect(() => {
     if (collections.length > 0) {
       detectAndSetDuplicates(collections);
     }
-  }, [collections, settings.prioritizeBySize, settings.duplicateMatchFields, detectAndSetDuplicates]);
+  }, [collections, detectAndSetDuplicates]);
 
   useEffect(() => {
     fetchSaves(1, false);
@@ -177,17 +183,16 @@ const AllItemsView = ({ onUpdate }) => {
   }, []);
 
   const filteredItems = getFilteredItems();
-  const duplicateCount = Array.from(duplicateMap.values()).filter(d => d.isDuplicate).length;
-
+  
   // Calculate percentages
   const seenPercentage = stats ? Math.round((stats.seenSaves / (stats.totalSaves || 1)) * 100) : 0;
   const favoritePercentage = stats ? Math.round(((stats.favoriteSaves || 0) / (stats.totalSaves || 1)) * 100) : 0;
-  const duplicatePercentage = stats ? Math.round((duplicateCount / (stats.totalSaves || 1)) * 100) : 0;
+  const duplicatePercentage = stats ? Math.round((duplicateStats.totalDuplicates / (stats.totalSaves || 1)) * 100) : 0;
 
   if (loading) {
     return (
       <div className="loading-container">
-        <FiLoader className="spinner" />
+        <div className="spinner"></div>
         <p>Loading all items...</p>
       </div>
     );
@@ -207,7 +212,6 @@ const AllItemsView = ({ onUpdate }) => {
 
   return (
     <div className="all-items-container">
-      {/* Header Section - Clean and minimal */}
       <div className="list-header">
         <div className="header-title-section">
           <h1>All Saved Items</h1>
@@ -224,7 +228,6 @@ const AllItemsView = ({ onUpdate }) => {
         </button>
       </div>
 
-      {/* Stats Cards - Modern, card-based design */}
       <div className="stats-grid">
         <div className="stat-card total">
           <div className="stat-icon">
@@ -258,21 +261,20 @@ const AllItemsView = ({ onUpdate }) => {
           </div>
         </div>
 
-        {settings.showDuplicates && duplicateCount > 0 && (
+        {settings.showDuplicates && duplicateStats.totalDuplicates > 0 && (
           <div className="stat-card duplicates">
             <div className="stat-icon">
               <FiCopy />
             </div>
             <div className="stat-content">
               <span className="stat-label">Duplicates</span>
-              <span className="stat-value">{duplicateCount}</span>
+              <span className="stat-value">{duplicateStats.totalDuplicates}</span>
               <span className="stat-percent">{duplicatePercentage}%</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Filters Section - Clean and intuitive */}
       <div className="filters-section">
         <button 
           className="filter-toggle-btn"
@@ -324,7 +326,6 @@ const AllItemsView = ({ onUpdate }) => {
         )}
       </div>
 
-      {/* Batch Actions */}
       <BatchActionBar
         items={filteredItems.map(item => ({
           save: item.save || item,
@@ -335,7 +336,6 @@ const AllItemsView = ({ onUpdate }) => {
         onComplete={handleRefresh}
       />
 
-      {/* Items Grid */}
       {filteredItems.length === 0 ? (
         <div className="empty-state enhanced">
           <div className="empty-icon">📦</div>
@@ -356,9 +356,9 @@ const AllItemsView = ({ onUpdate }) => {
               Clear All Filters
             </button>
           )}
-          {!settings.showDuplicates && duplicateCount > 0 && (
+          {!settings.showDuplicates && duplicateStats.totalDuplicates > 0 && (
             <p className="duplicate-note">
-              <FiCopy /> {duplicateCount} duplicate items are hidden. 
+              <FiCopy /> {duplicateStats.totalDuplicates} duplicate item{duplicateStats.totalDuplicates !== 1 ? 's' : ''} are hidden based on URL. 
               Enable "Show Duplicates" in settings to view them.
             </p>
           )}
@@ -370,7 +370,7 @@ const AllItemsView = ({ onUpdate }) => {
           hasMore={hasMore}
           loader={
             <div className="loader">
-              <FiLoader className="spinner" />
+              <div className="spinner"></div>
               <span>Loading more...</span>
             </div>
           }
@@ -389,6 +389,12 @@ const AllItemsView = ({ onUpdate }) => {
                 parentTitle={item.parentTitle}
                 saveIndex={item.saveIndex !== undefined ? item.saveIndex : index}
                 onUpdate={handleItemUpdate}
+                duplicateInfo={getDuplicateInfo(
+                  item.parentFbid || item.parentId, 
+                  item.saveIndex !== undefined ? item.saveIndex : index, 
+                  duplicateMap
+                )}
+                duplicateMap={duplicateMap}
               />
             ))}
           </div>

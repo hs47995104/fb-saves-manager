@@ -1,3 +1,5 @@
+// frontend/src/components/CollectionView.js - Fixed duplicate import
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -15,7 +17,7 @@ import { toast } from 'react-toastify';
 import { useSelection } from '../contexts/SelectionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { getAllItems, deleteCollection } from '../api';
-import { detectDuplicates, filterItemsByDuplicateSettings, getDuplicateInfo } from '../utils/duplicateDetector';
+import { detectDuplicates, getDuplicateInfo, filterItemsByDuplicateSettings } from '../utils/duplicateDetector';
 import ItemCard from './ItemCard';
 import BatchActionBar from './BatchActionBar';
 import DeleteModal from './DeleteModal';
@@ -52,11 +54,10 @@ const CollectionView = ({ onUpdate }) => {
       if (foundCollection) {
         setCollection(foundCollection);
         
-        if (settings.autoDetectDuplicates) {
-          const { duplicateMap } = detectDuplicates(response.data || [], settings);
-          setDuplicateMap(duplicateMap);
-          window.__duplicateMap = duplicateMap;
-        }
+        // Always detect duplicates based on URL
+        const { duplicateMap } = detectDuplicates(response.data || []);
+        setDuplicateMap(duplicateMap);
+        window.__duplicateMap = duplicateMap;
       } else {
         toast.error('Collection not found');
         navigate('/');
@@ -134,30 +135,19 @@ const CollectionView = ({ onUpdate }) => {
     }
   };
 
-  const getCollectionDuplicateStats = () => {
-    if (!collection?.saves) return { total: 0, inThisCollection: 0 };
+  const getDuplicateCount = () => {
+    if (!collection?.saves) return 0;
     
-    let duplicatesInThisCollection = 0;
-    let totalDuplicates = 0;
-    
+    let count = 0;
     collection.saves.forEach((_, index) => {
       const dupInfo = getDuplicateInfo(collection.fbid, index, duplicateMap);
-      if (dupInfo?.isDuplicate) {
-        duplicatesInThisCollection++;
-        totalDuplicates++;
-      } else if (dupInfo?.isOriginal && dupInfo.duplicateCount > 0) {
-        totalDuplicates += dupInfo.duplicateCount;
-      }
+      if (dupInfo?.isDuplicate) count++;
     });
-    
-    return { 
-      inThisCollection: duplicatesInThisCollection,
-      total: totalDuplicates 
-    };
+    return count;
   };
 
   const filteredSaves = getFilteredSaves();
-  const duplicateStats = getCollectionDuplicateStats();
+  const duplicateCount = getDuplicateCount();
 
   if (loading) {
     return (
@@ -203,15 +193,10 @@ const CollectionView = ({ onUpdate }) => {
               </div>
             )}
             
-            {settings.showDuplicates && duplicateStats.total > 0 && (
+            {settings.showDuplicates && duplicateCount > 0 && (
               <div className="meta-item duplicate-count">
                 <FiCopy />
-                <span>
-                  {duplicateStats.inThisCollection} duplicate{duplicateStats.inThisCollection !== 1 ? 's' : ''} in this collection
-                  {duplicateStats.total > duplicateStats.inThisCollection && 
-                    ` (${duplicateStats.total} total across collections)`
-                  }
-                </span>
+                <span>{duplicateCount} duplicate{duplicateCount !== 1 ? 's' : ''} in this collection</span>
               </div>
             )}
           </div>
@@ -273,14 +258,10 @@ const CollectionView = ({ onUpdate }) => {
               <option value="unseen">Unseen</option>
             </select>
 
-            {settings.showDuplicates && duplicateStats.inThisCollection > 0 && (
+            {!settings.showDuplicates && duplicateCount > 0 && (
               <div className="duplicate-info">
                 <FiCopy />
-                <span>
-                  {settings.showDuplicates 
-                    ? `Showing ${duplicateStats.inThisCollection} duplicates`
-                    : `${duplicateStats.inThisCollection} duplicates hidden`}
-                </span>
+                <span>{duplicateCount} duplicate{duplicateCount !== 1 ? 's' : ''} hidden</span>
               </div>
             )}
           </div>
@@ -317,9 +298,9 @@ const CollectionView = ({ onUpdate }) => {
           ) : (
             <>
               <p>This collection is empty. Move items here from other collections.</p>
-              {settings.showDuplicates && duplicateStats.inThisCollection > 0 && !settings.showDuplicates && (
+              {!settings.showDuplicates && duplicateCount > 0 && (
                 <p className="duplicate-note">
-                  <FiCopy /> {duplicateStats.inThisCollection} duplicate items are hidden. 
+                  <FiCopy /> {duplicateCount} duplicate item{duplicateCount !== 1 ? 's' : ''} are hidden based on URL. 
                   Enable "Show Duplicates" in settings to view them.
                 </p>
               )}
@@ -336,6 +317,8 @@ const CollectionView = ({ onUpdate }) => {
               parentTitle={collection.title}
               saveIndex={item.saveIndex}
               onUpdate={handleItemUpdate}
+              duplicateInfo={getDuplicateInfo(collection.fbid, item.saveIndex, duplicateMap)}
+              duplicateMap={duplicateMap}
             />
           ))}
         </div>

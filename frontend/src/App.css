@@ -1,4 +1,4 @@
-/* frontend/src/App.css - Updated with CSS variables */
+/* frontend/src/App.css - Compact version */
 
 .app {
   min-height: 100vh;
@@ -6,37 +6,43 @@
   transition: background-color 0.3s ease;
 }
 
-/* Main content */
+/* Main content - reduced padding */
 .main-content {
-  padding: 12px;
-  max-width: 1200px;
+  padding: 8px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
 @media (min-width: 480px) {
   .main-content {
-    padding: 16px;
+    padding: 10px;
   }
 }
 
 @media (min-width: 768px) {
   .main-content {
-    padding: 20px;
+    padding: 12px;
   }
 }
 
-/* Grid layouts */
+@media (min-width: 1200px) {
+  .main-content {
+    padding: 16px;
+  }
+}
+
+/* Grid layouts - tighter gaps */
 .collections-grid,
 .items-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 @media (min-width: 480px) {
   .collections-grid,
   .items-grid {
-    gap: 16px;
+    gap: 10px;
   }
 }
 
@@ -52,36 +58,48 @@
   }
 }
 
-@media (min-width: 480px) {
-  .items-grid {
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+@media (min-width: 1200px) {
+  .collections-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
-/* Card styling */
+@media (min-width: 480px) {
+  .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+/* Card styling - reduced padding */
 .fb-card {
   background: var(--fb-card-bg);
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow: 0 1px 2px var(--fb-shadow);
   border: 1px solid var(--fb-border);
   transition: all 0.2s;
+  padding: 10px;
 }
 
 .fb-card:hover {
   box-shadow: 0 2px 8px var(--fb-shadow-hover);
 }
 
-/* Buttons */
+/* Buttons - more compact */
+.fb-button-primary,
+.fb-button-secondary,
+.fb-button-green {
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  min-height: 32px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
 .fb-button-primary {
   background: var(--fb-blue);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 15px;
-  min-height: 44px;
-  cursor: pointer;
-  transition: background 0.2s;
 }
 
 .fb-button-primary:hover {
@@ -92,12 +110,6 @@
   background: var(--fb-input-bg);
   color: var(--fb-text);
   border: 1px solid var(--fb-border);
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 15px;
-  min-height: 44px;
-  cursor: pointer;
-  transition: background 0.2s;
 }
 
 .fb-button-secondary:hover {
@@ -108,12 +120,6 @@
   background: var(--fb-green);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 15px;
-  min-height: 44px;
-  cursor: pointer;
-  transition: background 0.2s;
 }
 
 .fb-button-green:hover {
@@ -124,19 +130,19 @@
   .fb-button-primary,
   .fb-button-secondary,
   .fb-button-green {
-    padding: 8px 16px;
-    min-height: auto;
+    padding: 6px 12px;
+    min-height: 32px;
   }
 }
 
-/* Loading states */
+/* Loading states - reduced padding */
 .loading-container,
 .error-container,
 .empty-state {
-  padding: 40px 16px;
+  padding: 24px 12px;
   background: var(--fb-card-bg);
   border: 1px solid var(--fb-border);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--fb-text);
 }
 
@@ -144,15 +150,15 @@
   .loading-container,
   .error-container,
   .empty-state {
-    padding: 60px 20px;
+    padding: 32px 16px;
   }
 }
 
-/* Toast notifications */
+/* Toast notifications - smaller margins */
 .fb-toast {
-  margin: 8px !important;
-  width: calc(100% - 16px) !important;
-  max-width: 400px !important;
+  margin: 4px !important;
+  width: calc(100% - 8px) !important;
+  max-width: 360px !important;
   background: var(--fb-card-bg) !important;
   color: var(--fb-text) !important;
   border: 1px solid var(--fb-border) !important;
@@ -160,7 +166,7 @@
 
 @media (min-width: 480px) {
   .fb-toast {
-    margin: 16px !important;
+    margin: 8px !important;
     width: auto !important;
   }
 }

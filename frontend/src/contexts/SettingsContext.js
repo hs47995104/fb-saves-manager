@@ -1,3 +1,5 @@
+// frontend/src/contexts/SettingsContext.js - Simplified duplicate settings
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const SettingsContext = createContext();
@@ -15,12 +17,7 @@ export const SettingsProvider = ({ children }) => {
     const savedSettings = localStorage.getItem('fbSavesSettings');
     return savedSettings ? JSON.parse(savedSettings) : {
       showDuplicates: false,
-      prioritizeBySize: true,
-      highlightDuplicates: true,
-      autoDetectDuplicates: true,
-      duplicateMatchFields: ['url', 'title', 'name'],
-      showDuplicateCount: true,
-      duplicateThreshold: 0.8
+      highlightDuplicates: true
     };
   });
 

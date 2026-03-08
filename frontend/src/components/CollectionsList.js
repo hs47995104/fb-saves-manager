@@ -1,4 +1,4 @@
-// frontend/src/components/CollectionsList.js - Redesigned version
+// frontend/src/components/CollectionsList.js - Updated duplicate detection
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ import {
 } from '../api';
 import { useSelection } from '../contexts/SelectionContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { detectDuplicates } from '../utils/duplicateDetector';
+import { detectDuplicates, getDuplicateStats } from '../utils/duplicateDetector';
 import CollectionCard from './CollectionCard';
 import BatchCollectionActions from './BatchCollectionActions';
 import { 
@@ -34,17 +34,22 @@ const CollectionsList = ({ refreshTrigger }) => {
   const [collections, setCollections] = useState([]);
   const [stats, setStats] = useState(null);
   const [duplicateMap, setDuplicateMap] = useState(new Map());
+  const [duplicateStats, setDuplicateStats] = useState({ totalDuplicates: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   const detectAndSetDuplicates = useCallback((collectionsData) => {
-    if (settings.autoDetectDuplicates && collectionsData.length > 0) {
-      const { duplicateMap } = detectDuplicates(collectionsData, settings);
+    if (collectionsData.length > 0) {
+      const { duplicateMap } = detectDuplicates(collectionsData);
       setDuplicateMap(duplicateMap);
+      
+      const stats = getDuplicateStats(collectionsData, duplicateMap);
+      setDuplicateStats(stats);
+      
       window.__duplicateMap = duplicateMap;
     }
-  }, [settings]);
+  }, []);
 
   const fetchStats = async () => {
     try {
@@ -89,23 +94,21 @@ const CollectionsList = ({ refreshTrigger }) => {
     if (collections.length > 0) {
       detectAndSetDuplicates(collections);
     }
-  }, [settings.prioritizeBySize, settings.duplicateMatchFields, detectAndSetDuplicates]);
+  }, [collections, detectAndSetDuplicates]);
 
   useEffect(() => {
     fetchCollections();
   }, [refreshTrigger]);
-
-  const duplicateCount = Array.from(duplicateMap.values()).filter(d => d.isDuplicate).length;
   
   // Calculate percentages
   const seenPercentage = stats ? Math.round((stats.seenSaves / (stats.totalSaves || 1)) * 100) : 0;
   const favoritePercentage = stats ? Math.round(((stats.favoriteSaves || 0) / (stats.totalSaves || 1)) * 100) : 0;
-  const duplicatePercentage = stats ? Math.round((duplicateCount / (stats.totalSaves || 1)) * 100) : 0;
+  const duplicatePercentage = stats ? Math.round((duplicateStats.totalDuplicates / (stats.totalSaves || 1)) * 100) : 0;
 
   if (loading) {
     return (
       <div className="loading-container">
-        <FiLoader className="spinner" />
+        <div className="spinner"></div>
         <p>Loading your collections...</p>
       </div>
     );
@@ -125,7 +128,6 @@ const CollectionsList = ({ refreshTrigger }) => {
 
   return (
     <div className="collections-container">
-      {/* Header Section */}
       <div className="page-header">
         <div className="header-title-section">
           <FiGrid className="header-icon" />
@@ -143,7 +145,6 @@ const CollectionsList = ({ refreshTrigger }) => {
         </button>
       </div>
 
-      {/* Stats Cards */}
       {stats && (
         <div className="stats-grid">
           <div className="stat-card total">
@@ -188,14 +189,14 @@ const CollectionsList = ({ refreshTrigger }) => {
             </div>
           </div>
 
-          {settings.showDuplicates && duplicateCount > 0 && (
+          {settings.showDuplicates && duplicateStats.totalDuplicates > 0 && (
             <div className="stat-card duplicates">
               <div className="stat-icon">
                 <FiCopy />
               </div>
               <div className="stat-content">
                 <span className="stat-label">Duplicates</span>
-                <span className="stat-value">{duplicateCount}</span>
+                <span className="stat-value">{duplicateStats.totalDuplicates}</span>
                 <span className="stat-percent">{duplicatePercentage}%</span>
               </div>
             </div>
@@ -203,13 +204,11 @@ const CollectionsList = ({ refreshTrigger }) => {
         </div>
       )}
 
-      {/* Batch Actions */}
       <BatchCollectionActions
         collections={collections}
         onComplete={handleRefresh}
       />
 
-      {/* Collections Grid */}
       {collections.length === 0 ? (
         <div className="empty-state enhanced">
           <div className="empty-icon">📁</div>
@@ -244,7 +243,6 @@ const CollectionsList = ({ refreshTrigger }) => {
             ))}
           </div>
           
-          {/* Quick stats footer */}
           <div className="collections-footer">
             <div className="footer-stats">
               <span>

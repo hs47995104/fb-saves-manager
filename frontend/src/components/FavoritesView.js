@@ -4,6 +4,7 @@ import { FiArrowLeft, FiHeart, FiFilter, FiSearch, FiChevronDown, FiChevronUp } 
 import { toast } from 'react-toastify';
 import { getAllItems } from '../api';
 import ItemCard from './ItemCard';
+import { getDuplicateInfo } from '../utils/duplicateDetector';
 import './Styles.css';
 
 const FavoritesView = ({ onUpdate }) => {
@@ -171,6 +172,12 @@ const FavoritesView = ({ onUpdate }) => {
               parentTitle={item.parentTitle}
               saveIndex={item.saveIndex}
               onUpdate={handleItemUpdate}
+              duplicateInfo={window.__duplicateMap ? getDuplicateInfo(
+                item.parentFbid,
+                item.saveIndex,
+                window.__duplicateMap
+              ) : null}
+              duplicateMap={window.__duplicateMap}
             />
           ))}
         </div>

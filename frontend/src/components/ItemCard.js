@@ -1,10 +1,11 @@
-// frontend/src/components/ItemCard.js - Fixed with website name extraction
+// frontend/src/components/ItemCard.js - Added duplicate indicators
+
 import React, { useState, useEffect } from 'react';
 import { 
   FiEye, FiEyeOff, FiExternalLink, FiTrash2, FiFolderPlus, 
   FiHeart, FiTag, FiClock, FiMessageSquare, FiCheckSquare, 
   FiSquare, FiCopy, FiInfo, FiMoreHorizontal,
-  FiUser  // Added FiUser here
+  FiUser
 } from 'react-icons/fi';
 import { updateSeen, updateFavorite, deleteSave, moveItem } from '../api';
 import { toast } from 'react-toastify';
@@ -97,7 +98,16 @@ const getFaviconUrl = (url) => {
   }
 };
 
-const ItemCard = ({ item, parentId, parentTitle, saveIndex, onUpdate, lastSeenFormatted }) => {
+const ItemCard = ({ 
+  item, 
+  parentId, 
+  parentTitle, 
+  saveIndex, 
+  onUpdate, 
+  lastSeenFormatted,
+  duplicateInfo,
+  duplicateMap 
+}) => {
   const { toggleItem, isSelected } = useSelection();
   const { settings } = useSettings();
   const [updating, setUpdating] = useState(false);
@@ -107,9 +117,16 @@ const ItemCard = ({ item, parentId, parentTitle, saveIndex, onUpdate, lastSeenFo
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(item.comments?.length || 0);
   const [favicon, setFavicon] = useState(null);
+  const [otherLocations, setOtherLocations] = useState([]);
 
   const itemKey = `${parentId}-${saveIndex}`;
   const selected = isSelected(itemKey);
+
+  // Get duplicate information
+  const itemDuplicateInfo = duplicateInfo || duplicateMap?.get(itemKey);
+  const isDuplicate = itemDuplicateInfo?.isDuplicate || false;
+  const isOriginal = itemDuplicateInfo?.isOriginal || false;
+  const duplicateCount = itemDuplicateInfo?.duplicateCount || 0;
 
   useEffect(() => {
     if (item.url) {
@@ -120,6 +137,37 @@ const ItemCard = ({ item, parentId, parentTitle, saveIndex, onUpdate, lastSeenFo
   useEffect(() => {
     setCommentCount(item.comments?.length || 0);
   }, [item.comments]);
+
+  // Find where else this item appears (for duplicates)
+  useEffect(() => {
+    if (isDuplicate && itemDuplicateInfo?.url && duplicateMap) {
+      const locations = [];
+      duplicateMap.forEach((info, key) => {
+        if (info.url === itemDuplicateInfo.url && info.isOriginal) {
+          const [collId, idx] = key.split('-');
+          locations.push({
+            collectionId: collId,
+            saveIndex: parseInt(idx, 10),
+            isOriginal: true
+          });
+        }
+      });
+      setOtherLocations(locations);
+    } else if (isOriginal && duplicateCount > 0 && itemDuplicateInfo?.url && duplicateMap) {
+      const locations = [];
+      duplicateMap.forEach((info, key) => {
+        if (info.url === itemDuplicateInfo.url && info.isDuplicate) {
+          const [collId, idx] = key.split('-');
+          locations.push({
+            collectionId: collId,
+            saveIndex: parseInt(idx, 10),
+            isDuplicate: true
+          });
+        }
+      });
+      setOtherLocations(locations);
+    }
+  }, [isDuplicate, isOriginal, itemDuplicateInfo, duplicateCount, duplicateMap]);
 
   const handleSeenToggle = async () => {
     if (updating) return;
@@ -216,11 +264,48 @@ const ItemCard = ({ item, parentId, parentTitle, saveIndex, onUpdate, lastSeenFo
 
   const itemTitle = item.title || item.name || 'Untitled';
   const tags = item.tags || [];
-  const siteName = getSiteNameFromUrl(item.url); // Get website name from URL
+  const siteName = getSiteNameFromUrl(item.url);
+
+  // Don't render if it's a duplicate and we're not showing duplicates
+  if (isDuplicate && !settings.showDuplicates) {
+    return null;
+  }
 
   return (
     <>
-      <div className={`item-card ${item.seen ? 'seen' : ''} ${updating ? 'updating' : ''} ${selected ? 'selected' : ''}`}>
+      <div className={`item-card ${item.seen ? 'seen' : ''} ${updating ? 'updating' : ''} ${selected ? 'selected' : ''} ${isDuplicate ? 'duplicate-item' : ''} ${isOriginal && duplicateCount > 0 ? 'has-duplicates' : ''}`}>
+        {/* Duplicate Badge */}
+        {(isDuplicate || (isOriginal && duplicateCount > 0)) && settings.highlightDuplicates && (
+          <div className={`duplicate-badge ${isDuplicate ? 'is-duplicate' : 'is-original'}`}>
+            {isDuplicate ? (
+              <>
+                <FiCopy className="duplicate-icon" />
+                <span>Duplicate of item in "{itemDuplicateInfo?.originalCollectionTitle || 'another collection'}"</span>
+                {otherLocations.length > 0 && (
+                  <span className="duplicate-count">+{otherLocations.length} more</span>
+                )}
+              </>
+            ) : (
+              <>
+                <FiCopy className="original-icon" />
+                <span>{duplicateCount} duplicate{duplicateCount !== 1 ? 's' : ''} in other collections</span>
+                {otherLocations.length > 0 && (
+                  <div className="other-locations">
+                    {/* {otherLocations.slice(0, 3).map((loc, idx) => (
+                      <span key={idx} className="location-tag">
+                        {loc.collectionId === parentId ? 'this collection' : 'another collection'}
+                      </span>
+                    ))} */}
+                    {otherLocations.length > 3 && (
+                      <span className="location-tag">+{otherLocations.length - 3} more</span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Facebook-style header with avatar */}
         <div className="item-header">
           <button 

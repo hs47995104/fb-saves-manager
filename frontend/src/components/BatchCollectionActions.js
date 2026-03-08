@@ -179,7 +179,7 @@ const BatchCollectionActions = ({
 
         {loading && (
           <div className="loading-indicator">
-            <FiLoader className="spin" />
+            <div className="spinner"></div>
           </div>
         )}
       </div>

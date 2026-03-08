@@ -115,7 +115,7 @@ const MoveToCollectionModal = ({
             
             {loading ? (
               <div className="loading-collections">
-                <FiLoader className="spinner" />
+                <div className="spinner"></div>
                 <span>Loading collections...</span>
               </div>
             ) : (

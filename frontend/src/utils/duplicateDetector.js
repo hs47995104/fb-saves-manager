@@ -1,201 +1,145 @@
-const generateItemKey = (item, fields = ['url', 'title', 'name']) => {
-  const parts = [];
+// frontend/src/utils/duplicateDetector.js - URL-based duplicate detection
+
+/**
+ * Normalize a URL for comparison
+ * - Remove trailing slashes
+ * - Convert to lowercase
+ * - Remove common tracking parameters
+ */
+const normalizeUrl = (url) => {
+  if (!url) return '';
   
-  if (fields.includes('url') && item.url) {
-    const normalizedUrl = item.url
-      .split('?')[0]
-      .replace(/\/$/, '')
-      .toLowerCase();
-    parts.push(`url:${normalizedUrl}`);
+  try {
+    // Handle relative URLs or malformed URLs gracefully
+    let urlStr = url.toLowerCase().trim();
+    
+    // Remove trailing slash
+    urlStr = urlStr.replace(/\/$/, '');
+    
+    // Try to parse as URL to remove query params and hash
+    try {
+      const urlObj = new URL(urlStr);
+      
+      // Remove common tracking parameters
+      const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid', 'ref'];
+      trackingParams.forEach(param => {
+        if (urlObj.searchParams.has(param)) {
+          urlObj.searchParams.delete(param);
+        }
+      });
+      
+      // Remove hash fragment
+      urlObj.hash = '';
+      
+      return urlObj.toString().toLowerCase();
+    } catch {
+      // If URL parsing fails, return cleaned string
+      return urlStr;
+    }
+  } catch (error) {
+    console.error('Error normalizing URL:', error);
+    return url;
   }
-  
-  if (fields.includes('title') && item.title) {
-    parts.push(`title:${item.title.toLowerCase().trim()}`);
-  }
-  
-  if (fields.includes('name') && item.name) {
-    parts.push(`name:${item.name.toLowerCase().trim()}`);
-  }
-  
-  if (parts.length === 0) {
-    if (item.url) parts.push(`url:${item.url.toLowerCase()}`);
-    else if (item.title) parts.push(`title:${item.title.toLowerCase()}`);
-    else if (item.name) parts.push(`name:${item.name.toLowerCase()}`);
-    else parts.push(`unknown:${Date.now()}`);
-  }
-  
-  return parts.join('|');
 };
 
-export const detectDuplicates = (collections, settings) => {
+/**
+ * Detect duplicates based solely on URLs
+ */
+export const detectDuplicates = (collections) => {
   if (!collections || collections.length === 0) {
-    return { duplicateMap: new Map(), itemKeyMap: new Map() };
+    return { duplicateMap: new Map() };
   }
 
-  const { prioritizeBySize = true, duplicateMatchFields = ['url', 'title', 'name'] } = settings;
-  
-  const sortedCollections = prioritizeBySize
-    ? [...collections].sort((a, b) => (b.saves?.length || 0) - (a.saves?.length || 0))
-    : collections;
+  // Sort collections by size (largest first) - original will be in largest collection
+  const sortedCollections = [...collections].sort((a, b) => 
+    (b.saves?.length || 0) - (a.saves?.length || 0)
+  );
 
-  const itemKeyMap = new Map();
-  const duplicateMap = new Map();
-  const collectionSizes = new Map();
-  const collectionTitles = new Map();
-
-  collections.forEach(collection => {
-    collectionSizes.set(collection.fbid, collection.saves?.length || 0);
-    collectionTitles.set(collection.fbid, collection.title || 'Untitled Collection');
-  });
+  const urlMap = new Map(); // normalized URL -> { collectionId, saveIndex, item }
+  const duplicateMap = new Map(); // key -> duplicate info
 
   sortedCollections.forEach(collection => {
     if (!collection.saves) return;
 
     collection.saves.forEach((save, index) => {
-      const itemKey = generateItemKey(save, duplicateMatchFields);
-      
-      if (itemKeyMap.has(itemKey)) {
-        const originalInfo = itemKeyMap.get(itemKey);
+      if (!save.url) return; // Skip items without URLs
+
+      const normalizedUrl = normalizeUrl(save.url);
+      const itemKey = `${collection.fbid}-${index}`;
+
+      if (urlMap.has(normalizedUrl)) {
+        // This is a duplicate
+        const original = urlMap.get(normalizedUrl);
         
-        if (!originalInfo.duplicateLocations) {
-          originalInfo.duplicateLocations = [];
-        }
-        
-        originalInfo.duplicateLocations.push({
-          collectionId: collection.fbid,
-          collectionTitle: collection.title || 'Untitled Collection',
-          saveIndex: index,
-          item: save
-        });
-        
-        originalInfo.duplicateCount = (originalInfo.duplicateCount || 0) + 1;
-        
-        itemKeyMap.set(itemKey, originalInfo);
-        
-        duplicateMap.set(`${collection.fbid}-${index}`, {
+        duplicateMap.set(itemKey, {
           isDuplicate: true,
           isOriginal: false,
-          originalCollectionId: originalInfo.collectionId,
-          originalCollectionTitle: originalInfo.collectionTitle,
-          originalCollectionSize: collectionSizes.get(originalInfo.collectionId) || 0,
-          originalIndex: originalInfo.index,
-          key: itemKey,
-          duplicateCount: originalInfo.duplicateCount,
-          totalDuplicates: originalInfo.duplicateCount,
-          duplicateLocations: originalInfo.duplicateLocations || []
+          originalCollectionId: original.collectionId,
+          originalCollectionTitle: original.collectionTitle,
+          originalIndex: original.index,
+          url: normalizedUrl
         });
       } else {
-        itemKeyMap.set(itemKey, {
+        // This is the first occurrence (original)
+        urlMap.set(normalizedUrl, {
           collectionId: collection.fbid,
           collectionTitle: collection.title || 'Untitled Collection',
           index,
-          duplicateCount: 0,
-          duplicateLocations: []
+          item: save
         });
         
-        duplicateMap.set(`${collection.fbid}-${index}`, {
+        duplicateMap.set(itemKey, {
           isDuplicate: false,
           isOriginal: true,
-          key: itemKey,
-          duplicateCount: 0,
-          duplicateLocations: []
+          url: normalizedUrl
         });
       }
     });
   });
 
-  itemKeyMap.forEach((info, key) => {
-    if (info.duplicateCount > 0) {
-      duplicateMap.set(`${info.collectionId}-${info.index}`, {
-        isDuplicate: false,
-        isOriginal: true,
-        key,
-        duplicateCount: info.duplicateCount,
-        totalDuplicates: info.duplicateCount,
-        duplicateLocations: info.duplicateLocations || []
-      });
+  // Add duplicate count to originals
+  urlMap.forEach((original, url) => {
+    // Count how many duplicates exist for this URL
+    let duplicateCount = 0;
+    duplicateMap.forEach((info, key) => {
+      if (info.url === url && info.isDuplicate) {
+        duplicateCount++;
+      }
+    });
 
-      (info.duplicateLocations || []).forEach(loc => {
-        const dupKey = `${loc.collectionId}-${loc.saveIndex}`;
-        const existing = duplicateMap.get(dupKey) || {};
-        duplicateMap.set(dupKey, {
-          ...existing,
-          isDuplicate: true,
-          isOriginal: false,
-          originalCollectionId: info.collectionId,
-          originalCollectionTitle: info.collectionTitle,
-          originalIndex: info.index,
-          key,
-          duplicateCount: info.duplicateCount,
-          totalDuplicates: info.duplicateCount,
-          duplicateLocations: info.duplicateLocations || []
-        });
+    // Update original item with duplicate count
+    const originalKey = `${original.collectionId}-${original.index}`;
+    if (duplicateMap.has(originalKey)) {
+      duplicateMap.set(originalKey, {
+        ...duplicateMap.get(originalKey),
+        duplicateCount
       });
     }
   });
 
-  return { 
-    duplicateMap,
-    itemKeyMap 
-  };
+  return { duplicateMap };
 };
 
+/**
+ * Check if an item is a duplicate
+ */
 export const isDuplicate = (collectionId, saveIndex, duplicateMap) => {
   const key = `${collectionId}-${saveIndex}`;
   return duplicateMap.get(key)?.isDuplicate || false;
 };
 
+/**
+ * Get duplicate information for an item
+ */
 export const getDuplicateInfo = (collectionId, saveIndex, duplicateMap) => {
   const key = `${collectionId}-${saveIndex}`;
   return duplicateMap.get(key);
 };
 
-export const formatDuplicateLocations = (duplicateLocations, currentCollectionId = null, maxDisplay = 3) => {
-  if (!duplicateLocations || duplicateLocations.length === 0) {
-    return '';
-  }
-  
-  const locations = currentCollectionId 
-    ? duplicateLocations.filter(loc => loc.collectionId !== currentCollectionId)
-    : duplicateLocations;
-  
-  if (locations.length === 0) return '';
-  
-  const collectionCounts = new Map();
-  locations.forEach(loc => {
-    const count = collectionCounts.get(loc.collectionTitle) || 0;
-    collectionCounts.set(loc.collectionTitle, count + 1);
-  });
-  
-  const parts = [];
-  let count = 0;
-  
-  for (const [collectionTitle, itemCount] of collectionCounts) {
-    if (count >= maxDisplay) break;
-    if (itemCount === 1) {
-      parts.push(`"${collectionTitle}"`);
-    } else {
-      parts.push(`"${collectionTitle}" (${itemCount})`);
-    }
-    count++;
-  }
-  
-  const remaining = locations.length - parts.length;
-  
-  if (remaining > 0) {
-    if (parts.length === 0) {
-      return `in ${remaining} other location${remaining > 1 ? 's' : ''}`;
-    } else {
-      return `${parts.join(', ')} and ${remaining} more`;
-    }
-  }
-  
-  return parts.join(', ');
-};
-
-export const filterItemsByDuplicateSettings = (items, duplicateMap, settings) => {
-  const { showDuplicates = false } = settings;
-  
+/**
+ * Filter items based on duplicate settings
+ */
+export const filterItemsByDuplicateSettings = (items, duplicateMap, showDuplicates = false) => {
   if (showDuplicates) {
     return items;
   }
@@ -207,27 +151,67 @@ export const filterItemsByDuplicateSettings = (items, duplicateMap, settings) =>
   });
 };
 
+/**
+ * Get all duplicates grouped by original item
+ */
 export const getDuplicatesByOriginal = (collections, duplicateMap) => {
   const groupedDuplicates = new Map();
   
+  // First, collect all originals with their duplicates
   duplicateMap.forEach((info, key) => {
-    if (info.isDuplicate && info.originalCollectionId) {
+    if (info.isDuplicate && info.url) {
       const originalKey = `${info.originalCollectionId}-${info.originalIndex}`;
+      
       if (!groupedDuplicates.has(originalKey)) {
-        groupedDuplicates.set(originalKey, []);
+        groupedDuplicates.set(originalKey, {
+          originalCollectionId: info.originalCollectionId,
+          originalIndex: info.originalIndex,
+          url: info.url,
+          duplicates: []
+        });
       }
       
-      const collection = collections.find(c => c.fbid === info.originalCollectionId);
-      if (collection && collection.saves && collection.saves[info.originalIndex]) {
-        groupedDuplicates.get(originalKey).push({
-          ...info,
-          item: collection.saves[info.originalIndex],
-          collectionId: info.originalCollectionId,
-          saveIndex: info.originalIndex
+      // Find the actual item data
+      const [collectionId, indexStr] = key.split('-');
+      const index = parseInt(indexStr, 10);
+      const collection = collections.find(c => c.fbid === collectionId);
+      const item = collection?.saves?.[index];
+      
+      if (item) {
+        groupedDuplicates.get(originalKey).duplicates.push({
+          collectionId,
+          saveIndex: index,
+          item,
+          collectionTitle: collection?.title || 'Unknown Collection'
         });
       }
     }
   });
   
   return groupedDuplicates;
+};
+
+/**
+ * Get duplicate statistics
+ */
+export const getDuplicateStats = (collections, duplicateMap) => {
+  let totalDuplicates = 0;
+  const collectionStats = new Map();
+  
+  duplicateMap.forEach((info, key) => {
+    if (info.isDuplicate) {
+      totalDuplicates++;
+      
+      const [collectionId] = key.split('-');
+      if (!collectionStats.has(collectionId)) {
+        collectionStats.set(collectionId, 0);
+      }
+      collectionStats.set(collectionId, collectionStats.get(collectionId) + 1);
+    }
+  });
+  
+  return {
+    totalDuplicates,
+    collectionStats
+  };
 };

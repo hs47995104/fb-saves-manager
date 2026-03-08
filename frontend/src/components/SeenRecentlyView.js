@@ -25,6 +25,7 @@ import { useSelection } from '../contexts/SelectionContext';
 import ItemCard from './ItemCard';
 import BatchActionBar from './BatchActionBar';
 import DeleteModal from './DeleteModal';
+import { getDuplicateInfo } from '../utils/duplicateDetector';
 import './Styles.css';
 
 const SeenRecentlyView = ({ onUpdate }) => {
@@ -232,7 +233,7 @@ const SeenRecentlyView = ({ onUpdate }) => {
   if (loading) {
     return (
       <div className="loading-container">
-        <FiLoader className="spinner" />
+        <div className="spinner"></div>
         <p>Loading seen items...</p>
       </div>
     );
@@ -417,7 +418,7 @@ const SeenRecentlyView = ({ onUpdate }) => {
           hasMore={hasMore}
           loader={
             <div className="loader">
-              <FiLoader className="spinner" />
+              <div className="spinner"></div>
               <span>Loading more...</span>
             </div>
           }
@@ -447,6 +448,12 @@ const SeenRecentlyView = ({ onUpdate }) => {
                     parentTitle={item.parentTitle}
                     saveIndex={item.saveIndex}
                     onUpdate={handleRefresh}
+                    duplicateInfo={window.__duplicateMap ? getDuplicateInfo(
+                      item.parentFbid || item.parentId,
+                      item.saveIndex,
+                      window.__duplicateMap
+                    ) : null}
+                    duplicateMap={window.__duplicateMap}
                   />
                 ))}
               </div>

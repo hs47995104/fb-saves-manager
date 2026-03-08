@@ -1,4 +1,4 @@
-/* frontend/src/components/Header.css - Updated with mobile username capsule visibility */
+/* frontend/src/components/Header.css - Compact version */
 
 .app-header {
   position: sticky;
@@ -10,21 +10,21 @@
 }
 
 .app-header.scrolled {
-  box-shadow: 0 4px 12px var(--fb-shadow);
+  box-shadow: 0 2px 8px var(--fb-shadow);
 }
 
 .header-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  min-height: 64px;
+  gap: 0.75rem;
+  min-height: 52px;
 }
 
-/* Brand */
+/* Brand - Compact */
 .header-left {
   display: flex;
   align-items: center;
@@ -34,16 +34,16 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   cursor: pointer;
 }
 
 .brand-icon {
-  font-size: 1.75rem;
+  font-size: 1.4rem;
   color: var(--fb-blue);
   background: linear-gradient(135deg, var(--fb-blue), #0e5fc7);
-  border-radius: 12px;
-  padding: 0.5rem;
+  border-radius: 8px;
+  padding: 0.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,10 +52,12 @@
 .brand-icon svg {
   stroke: white;
   stroke-width: 1.5;
+  width: 20px;
+  height: 20px;
 }
 
 .brand-name {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 700;
   line-height: 1.2;
   display: flex;
@@ -67,22 +69,22 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  font-size: 1.25rem;
+  font-size: 1rem;
   letter-spacing: -0.5px;
 }
 
 .brand-manager {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: var(--fb-text-secondary);
   font-weight: 400;
 }
 
-/* Desktop Navigation */
+/* Desktop Navigation - Compact */
 .desktop-nav {
   display: none;
   align-items: center;
-  gap: 0.25rem;
-  margin: 0 0.5rem;
+  gap: 0.2rem;
+  margin: 0 0.4rem;
   flex: 1;
   justify-content: center;
 }
@@ -90,13 +92,13 @@
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
   background: transparent;
   border: none;
-  border-radius: 40px;
+  border-radius: 30px;
   color: var(--fb-text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -115,7 +117,7 @@
 }
 
 .nav-icon {
-  font-size: 1.1rem;
+  font-size: 1rem;
   display: flex;
   align-items: center;
 }
@@ -126,7 +128,7 @@
 
 .active-indicator {
   position: absolute;
-  bottom: -0.5rem;
+  bottom: -0.3rem;
   left: 50%;
   transform: translateX(-50%);
   width: 4px;
@@ -139,13 +141,13 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-shrink: 0;
 }
 
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--fb-input-bg);
   border: 1px solid var(--fb-border);
@@ -155,7 +157,7 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .icon-btn:hover {
@@ -173,20 +175,20 @@
   color: white;
 }
 
-/* User Menu */
+/* User Menu - Compact */
 .user-menu-container {
   position: relative;
-  display: block; /* Always visible on all screen sizes */
+  display: block;
 }
 
 .user-menu-trigger {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  gap: 0.3rem;
+  padding: 0.2rem 0.4rem 0.2rem 0.2rem;
   background: var(--fb-input-bg);
   border: 1px solid var(--fb-border);
-  border-radius: 40px;
+  border-radius: 30px;
   cursor: pointer;
   transition: all 0.2s;
   color: var(--fb-text);
@@ -198,48 +200,48 @@
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--fb-blue);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .user-name {
   font-weight: 500;
-  font-size: 0.95rem;
-  max-width: 120px;
+  font-size: 0.85rem;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline; /* Always visible */
+  display: inline;
   color: var(--fb-text);
 }
 
 .chevron {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--fb-text-secondary);
   transition: transform 0.2s;
-  display: inline; /* Always visible */
+  display: inline;
 }
 
 .chevron.open {
   transform: rotate(180deg);
 }
 
-/* User Dropdown */
+/* User Dropdown - Compact */
 .user-dropdown {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  top: calc(100% + 0.4rem);
   right: 0;
-  min-width: 240px;
+  min-width: 200px;
   background: var(--fb-card-bg);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px var(--fb-shadow);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px var(--fb-shadow);
   border: 1px solid var(--fb-border);
   overflow: hidden;
   animation: slideDown 0.2s ease;
@@ -247,44 +249,44 @@
 }
 
 .dropdown-header {
-  padding: 1rem;
+  padding: 0.75rem;
   background: var(--fb-hover);
 }
 
 .dropdown-user-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .dropdown-user-info strong {
   color: var(--fb-text);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 .dropdown-user-info span {
   color: var(--fb-text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .dropdown-divider {
   height: 1px;
   background: var(--fb-divider);
-  margin: 0.25rem 0;
+  margin: 0.2rem 0;
 }
 
 .dropdown-item {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.8rem;
   background: none;
   border: none;
   text-align: left;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--fb-text);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   transition: background 0.2s;
 }
 
@@ -315,26 +317,26 @@
 }
 
 .mobile-nav.open {
-  max-height: 500px;
+  max-height: 400px;
 }
 
 .mobile-nav-items {
-  padding: 0.5rem;
+  padding: 0.4rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .mobile-nav-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.8rem;
+  padding: 0.8rem;
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--fb-text-secondary);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -353,7 +355,7 @@
 }
 
 .mobile-nav-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   display: flex;
   align-items: center;
 }
@@ -365,19 +367,19 @@
 /* Responsive adjustments */
 @media (min-width: 768px) {
   .header-container {
-    padding: 0.75rem 2rem;
+    padding: 0.5rem 1.5rem;
   }
 
   .brand-name {
-    font-size: 1.75rem;
-  }
-
-  .brand-saves {
     font-size: 1.5rem;
   }
 
+  .brand-saves {
+    font-size: 1.2rem;
+  }
+
   .brand-manager {
-    font-size: 0.875rem;
+    font-size: 0.7rem;
   }
 }
 
@@ -391,11 +393,11 @@
   }
 
   .nav-item {
-    padding: 0.6rem 1.2rem;
+    padding: 0.5rem 1rem;
   }
 
   .nav-icon {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
 
   .mobile-menu-toggle {
@@ -405,73 +407,73 @@
 
 @media (min-width: 1200px) {
   .header-container {
-    padding: 0.75rem 3rem;
+    padding: 0.5rem 2rem;
   }
 
   .nav-item {
-    padding: 0.6rem 1.5rem;
+    padding: 0.5rem 1.2rem;
   }
 }
 
 @media (max-width: 767px) {
   .header-container {
-    padding: 0.5rem 1rem;
-    min-height: 56px;
-    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    min-height: 48px;
+    gap: 0.4rem;
   }
 
   .brand-icon {
-    font-size: 1.5rem;
-    padding: 0.4rem;
+    font-size: 1.3rem;
+    padding: 0.3rem;
   }
 
   .brand-saves {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
 
   .brand-manager {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
   }
 
   .icon-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 1rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
   }
 
   .user-avatar {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
   
   .user-name {
-    max-width: 80px;
-    font-size: 0.85rem;
+    max-width: 70px;
+    font-size: 0.8rem;
   }
   
   .user-menu-trigger {
-    padding: 0.2rem 0.4rem 0.2rem 0.2rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.2rem;
   }
 
   .mobile-nav-item {
-    padding: 0.875rem;
+    padding: 0.7rem;
   }
 }
 
 @media (max-width: 480px) {
   .user-name {
-    max-width: 60px;
+    max-width: 50px;
   }
   
   .user-menu-trigger {
-    gap: 0.25rem;
+    gap: 0.2rem;
   }
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-5px);
   }
   to {
     opacity: 1;
