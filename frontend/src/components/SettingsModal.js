@@ -178,12 +178,12 @@ const SettingsModal = ({ isOpen, onClose }) => {
               How Duplicate Detection Works
             </h4>
             <ul className="info-list">
-              <li>• Items are considered duplicates if they have the same URL</li>
-              <li>• URLs are normalized (trailing slashes removed, tracking parameters ignored)</li>
-              <li>• Collections with more items are prioritized as the source of truth</li>
-              <li>• When "Show Duplicates" is OFF, only the original item appears in lists</li>
-              <li>• When "Show Duplicates" is ON, duplicates are labeled with the source collection</li>
-              <li>• Settings are saved to your account and synced across devices</li>
+              <li>Items are considered duplicates if they have the same URL</li>
+              <li>URLs are normalized (trailing slashes removed, tracking parameters ignored)</li>
+              <li>Collections with more items are prioritized as the source of truth</li>
+              <li>When "Show Duplicates" is OFF, only the original item appears in lists</li>
+              <li>When "Show Duplicates" is ON, duplicates are labeled with the source collection</li>
+              <li>Settings are saved to your account and synced across devices</li>
             </ul>
           </div>
 

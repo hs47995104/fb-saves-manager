@@ -1,4 +1,4 @@
-// frontend/src/components/AllItemsView.js - Updated duplicate detection
+// frontend/src/components/AllItemsView.js - Optimized version
 
 import React, { useState, useEffect, useCallback } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -11,6 +11,8 @@ import {
 import { useSelection } from '../contexts/SelectionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { detectDuplicates, filterItemsByDuplicateSettings, getDuplicateStats } from '../utils/duplicateDetector';
+import { isVideoUrl, getVideoPlatform, getVideoStats } from '../utils/videoDetector';
+import { enrichItemsWithVideoInfo } from '../utils/itemEnricher';
 import ItemCard from './ItemCard';
 import BatchActionBar from './BatchActionBar';
 import { getDuplicateInfo } from '../utils/duplicateDetector';
@@ -25,7 +27,13 @@ import {
   FiEye,
   FiEyeOff,
   FiChevronDown,
-  FiChevronUp
+  FiChevronUp,
+  FiFilm,
+  FiVideo,
+  FiCamera,
+  FiLink,
+  FiFileText,
+  FiUsers
 } from 'react-icons/fi';
 import './Styles.css';
 
@@ -34,6 +42,7 @@ const AllItemsView = ({ onUpdate }) => {
   const { settings } = useSettings();
   
   const [items, setItems] = useState([]);
+  const [enrichedItems, setEnrichedItems] = useState([]);
   const [collections, setCollections] = useState([]);
   const [stats, setStats] = useState(null);
   const [duplicateMap, setDuplicateMap] = useState(new Map());
@@ -47,6 +56,19 @@ const AllItemsView = ({ onUpdate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeen, setFilterSeen] = useState('unseen');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // New state for category filtering
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [videoStats, setVideoStats] = useState({ total: 0, reels: 0, videos: 0, platforms: {} });
+
+  const categories = [
+    { id: 'all', label: 'All Items', icon: <FiBarChart2 />, color: '#1877f2' },
+    { id: 'videos', label: 'All Videos', icon: <FiFilm />, color: '#e74c3c' },
+    { id: 'reels', label: 'Reels & Shorts', icon: <FiVideo />, color: '#9b59b6' },
+    { id: 'posts', label: 'Posts', icon: <FiFileText />, color: '#2ecc71' },
+    { id: 'photos', label: 'Photos', icon: <FiCamera />, color: '#f39c12' },
+    { id: 'links', label: 'Links', icon: <FiLink />, color: '#3498db' }
+  ];
 
   const detectAndSetDuplicates = useCallback((collectionsData) => {
     if (collectionsData.length > 0) {
@@ -94,12 +116,32 @@ const AllItemsView = ({ onUpdate }) => {
       
       setHasMore(pageNum < (response.data.pagination?.pages || 1));
       
+      // Enrich items with video info once at the top level
+      const enrichedNewItems = enrichItemsWithVideoInfo(newItems);
+      
       if (append) {
         setItems(prev => [...prev, ...newItems]);
+        setEnrichedItems(prev => [...prev, ...enrichedNewItems]);
       } else {
         setItems(newItems);
+        setEnrichedItems(enrichedNewItems);
         clearSelection();
       }
+      
+      // Calculate video stats from enriched items
+      const allItems = append ? [...enrichedItems, ...enrichedNewItems] : enrichedNewItems;
+      const videoStats = {
+        total: allItems.filter(item => item._videoInfo?.isVideo).length,
+        reels: allItems.filter(item => item._videoInfo?.isReel).length,
+        videos: allItems.filter(item => item._videoInfo?.isVideo && !item._videoInfo?.isReel).length,
+        platforms: allItems.reduce((acc, item) => {
+          if (item._videoInfo?.platformName) {
+            acc[item._videoInfo.platformName] = (acc[item._videoInfo.platformName] || 0) + 1;
+          }
+          return acc;
+        }, {})
+      };
+      setVideoStats(videoStats);
       
       await fetchStats();
     } catch (error) {
@@ -109,7 +151,7 @@ const AllItemsView = ({ onUpdate }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [clearSelection, collections.length, detectAndSetDuplicates]);
+  }, [clearSelection, collections.length, detectAndSetDuplicates, enrichedItems]);
 
   const loadMore = () => {
     const nextPage = page + 1;
@@ -143,8 +185,9 @@ const AllItemsView = ({ onUpdate }) => {
   };
 
   const getFilteredItems = useCallback(() => {
-    let filtered = items;
+    let filtered = enrichedItems;
     
+    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(item => {
@@ -158,6 +201,7 @@ const AllItemsView = ({ onUpdate }) => {
       });
     }
     
+    // Apply seen filter
     if (filterSeen !== 'all') {
       const seenValue = filterSeen === 'seen';
       filtered = filtered.filter(item => {
@@ -166,10 +210,38 @@ const AllItemsView = ({ onUpdate }) => {
       });
     }
     
+    // Apply duplicate filter
     filtered = filterItemsByDuplicateSettings(filtered, duplicateMap, settings.showDuplicates);
     
+    // Apply category filter - now using pre-computed _videoInfo
+    if (activeCategory !== 'all') {
+      filtered = filtered.filter(item => {
+        const save = item.save || item;
+        const url = save.url || '';
+        
+        switch (activeCategory) {
+          case 'videos':
+            return item._videoInfo?.isVideo === true;
+          case 'reels':
+            return item._videoInfo?.isReel === true;
+          case 'posts':
+            return url.includes('/posts/') || url.includes('/story.php') || url.includes('/permalink.php');
+          case 'photos':
+            return url.includes('/photos/') || url.includes('/photo.php');
+          case 'links':
+            return !item._videoInfo?.isVideo && 
+                   !url.includes('/posts/') && 
+                   !url.includes('/photos/') && 
+                   !url.includes('/reel/') &&
+                   !url.includes('/shorts/');
+          default:
+            return true;
+        }
+      });
+    }
+    
     return filtered;
-  }, [items, searchTerm, filterSeen, duplicateMap, settings.showDuplicates]);
+  }, [enrichedItems, searchTerm, filterSeen, duplicateMap, settings.showDuplicates, activeCategory]);
 
   useEffect(() => {
     if (collections.length > 0) {
@@ -261,6 +333,27 @@ const AllItemsView = ({ onUpdate }) => {
           </div>
         </div>
 
+        <div className="stat-card videos">
+          <div className="stat-icon">
+            <FiFilm />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Videos</span>
+            <span className="stat-value">{videoStats.total}</span>
+            <span className="stat-percent">{Math.round((videoStats.total / (stats?.totalSaves || 1)) * 100)}%</span>
+          </div>
+        </div>
+
+        <div className="stat-card reels">
+          <div className="stat-icon">
+            <FiVideo />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Reels/Shorts</span>
+            <span className="stat-value">{videoStats.reels}</span>
+          </div>
+        </div>
+
         {settings.showDuplicates && duplicateStats.totalDuplicates > 0 && (
           <div className="stat-card duplicates">
             <div className="stat-icon">
@@ -274,6 +367,39 @@ const AllItemsView = ({ onUpdate }) => {
           </div>
         )}
       </div>
+
+      {/* Category Tabs */}
+      <div className="category-tabs">
+        {categories.map(category => (
+          <button
+            key={category.id}
+            className={`category-tab ${activeCategory === category.id ? 'active' : ''}`}
+            onClick={() => setActiveCategory(category.id)}
+            style={{ '--tab-color': category.color }}
+          >
+            <span className="tab-icon">{category.icon}</span>
+            <span className="tab-label">{category.label}</span>
+            {category.id === 'videos' && videoStats.total > 0 && (
+              <span className="tab-count">{videoStats.total}</span>
+            )}
+            {category.id === 'reels' && videoStats.reels > 0 && (
+              <span className="tab-count">{videoStats.reels}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Platform badges for video categories */}
+      {(activeCategory === 'videos' || activeCategory === 'reels') && Object.keys(videoStats.platforms).length > 0 && (
+        <div className="platform-badges">
+          {Object.entries(videoStats.platforms).map(([platform, count]) => (
+            <div key={platform} className="platform-badge">
+              <span className="platform-name">{platform}</span>
+              <span className="platform-count">{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="filters-section">
         <button 
@@ -341,16 +467,17 @@ const AllItemsView = ({ onUpdate }) => {
           <div className="empty-icon">📦</div>
           <h3>No items found</h3>
           <p>
-            {searchTerm || filterSeen !== 'all' 
+            {searchTerm || filterSeen !== 'all' || activeCategory !== 'all'
               ? 'Try adjusting your filters'
               : 'Upload your Facebook data to get started'}
           </p>
-          {(searchTerm || filterSeen !== 'all') && (
+          {(searchTerm || filterSeen !== 'all' || activeCategory !== 'all') && (
             <button 
               className="clear-filters-btn"
               onClick={() => {
                 setSearchTerm('');
                 setFilterSeen('unseen');
+                setActiveCategory('all');
               }}
             >
               Clear All Filters
@@ -395,6 +522,7 @@ const AllItemsView = ({ onUpdate }) => {
                   duplicateMap
                 )}
                 duplicateMap={duplicateMap}
+                videoInfo={item._videoInfo} // Pass pre-computed video info as prop
               />
             ))}
           </div>

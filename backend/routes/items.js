@@ -312,7 +312,7 @@ router.post('/collections', authMiddleware, async (req, res) => {
   }
 });
 
-// Move an item from one collection to another
+// Move an item from one collection to another - FIXED VERSION
 router.post('/items/move', authMiddleware, async (req, res) => {
   try {
     const { sourceCollectionId, targetCollectionId, saveIndex, itemId } = req.body;
@@ -345,20 +345,34 @@ router.post('/items/move', authMiddleware, async (req, res) => {
     let itemToMove = null;
     let actualSaveIndex = saveIndex;
     
-    if (saveIndex !== undefined) {
+    if (saveIndex !== undefined && saveIndex !== null) {
       // Move by index
       if (saveIndex < 0 || saveIndex >= sourceCollection.saves.length) {
         return res.status(404).json({ error: 'Save not found at specified index' });
       }
-      itemToMove = sourceCollection.saves[saveIndex];
+      
+      // Get the save as a plain object to avoid Mongoose issues
+      // Use toObject() to get a plain JavaScript object
+      const saveDoc = sourceCollection.saves[saveIndex];
+      itemToMove = saveDoc.toObject ? saveDoc.toObject() : { ...saveDoc };
+      
+      // Ensure all required fields exist
+      if (!itemToMove.url) {
+        return res.status(400).json({ error: 'Cannot move item: missing URL' });
+      }
+      
+      // Remove from source
       sourceCollection.saves.splice(saveIndex, 1);
+      
     } else if (itemId) {
       // Move by itemId
       const itemIndex = sourceCollection.saves.findIndex(s => s.itemId === itemId);
       if (itemIndex === -1) {
         return res.status(404).json({ error: 'Item not found in source collection' });
       }
-      itemToMove = sourceCollection.saves[itemIndex];
+      
+      const saveDoc = sourceCollection.saves[itemIndex];
+      itemToMove = saveDoc.toObject ? saveDoc.toObject() : { ...saveDoc };
       sourceCollection.saves.splice(itemIndex, 1);
       actualSaveIndex = itemIndex;
     } else {
@@ -374,12 +388,24 @@ router.post('/items/move', authMiddleware, async (req, res) => {
       itemToMove.itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
+    // Remove _id if it exists (Mongoose will add a new one when pushing)
+    delete itemToMove._id;
+    
+    // Ensure all required fields are present
+    if (!itemToMove.url) {
+      return res.status(400).json({ error: 'Item has no URL' });
+    }
+
     // Add to target collection
     targetCollection.saves.push(itemToMove);
 
     // Update timestamps
     sourceCollection.updatedAt = new Date();
     targetCollection.updatedAt = new Date();
+
+    // Mark modified paths to ensure changes are saved
+    sourceCollection.markModified('saves');
+    targetCollection.markModified('saves');
 
     // Save both collections
     await sourceCollection.save();
@@ -466,6 +492,7 @@ router.post('/saves/bulk-delete', authMiddleware, async (req, res) => {
 
         if (indicesToRemove.length > 0) {
           collection.updatedAt = new Date();
+          collection.markModified('saves');
           await collection.save();
           
           modifiedCollections.push({
@@ -500,6 +527,7 @@ router.post('/saves/bulk-delete', authMiddleware, async (req, res) => {
 
       if (deletedCount > 0) {
         collection.updatedAt = new Date();
+        collection.markModified('saves');
         await collection.save();
         
         modifiedCollections.push({
@@ -535,6 +563,7 @@ router.post('/saves/bulk-delete', authMiddleware, async (req, res) => {
         if (deleted > 0) {
           deletedCount += deleted;
           collection.updatedAt = new Date();
+          collection.markModified('saves');
           await collection.save();
           
           modifiedCollections.push({
@@ -747,6 +776,7 @@ router.patch('/saves/seen/bulk', authMiddleware, async (req, res) => {
 
     if (updatedCount > 0) {
       collection.updatedAt = new Date();
+      collection.markModified('saves');
       await collection.save();
     }
 
@@ -792,6 +822,7 @@ router.patch('/saves/favorite/bulk', authMiddleware, async (req, res) => {
 
     if (updatedCount > 0) {
       collection.updatedAt = new Date();
+      collection.markModified('saves');
       await collection.save();
     }
 
@@ -886,12 +917,16 @@ router.delete('/save/:itemId/:saveIndex', authMiddleware, async (req, res) => {
     }
 
     // Store the deleted save info for response
-    const deletedSave = { ...collection.saves[index].toObject() };
+    const deletedSave = collection.saves[index].toObject 
+      ? collection.saves[index].toObject() 
+      : { ...collection.saves[index] };
+    
     console.log('Deleting save at index:', index, 'URL:', deletedSave.url);
 
     // Remove the save from the array
     collection.saves.splice(index, 1);
     collection.updatedAt = new Date();
+    collection.markModified('saves');
     
     await collection.save();
     console.log('Successfully deleted save. New saves count:', collection.saves.length);
@@ -933,6 +968,7 @@ router.delete('/saves/seen/all', authMiddleware, async (req, res) => {
       if (deleted > 0) {
         totalDeleted += deleted;
         collection.updatedAt = new Date();
+        collection.markModified('saves');
         await collection.save();
         
         modifiedCollections.push({

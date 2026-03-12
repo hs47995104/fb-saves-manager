@@ -1,11 +1,11 @@
-// frontend/src/components/ItemCard.js - Added duplicate indicators
+// frontend/src/components/ItemCard.js - Optimized version with videoInfo prop
 
 import React, { useState, useEffect } from 'react';
 import { 
   FiEye, FiEyeOff, FiExternalLink, FiTrash2, FiFolderPlus, 
   FiHeart, FiTag, FiClock, FiMessageSquare, FiCheckSquare, 
   FiSquare, FiCopy, FiInfo, FiMoreHorizontal,
-  FiUser
+  FiUser, FiFilm, FiVideo
 } from 'react-icons/fi';
 import { updateSeen, updateFavorite, deleteSave, moveItem } from '../api';
 import { toast } from 'react-toastify';
@@ -98,6 +98,17 @@ const getFaviconUrl = (url) => {
   }
 };
 
+// Helper function to get badge style
+const getVideoBadgeStyle = (platform) => {
+  if (!platform) return {};
+  
+  return {
+    backgroundColor: platform.color + '20',
+    color: platform.color,
+    borderColor: platform.color
+  };
+};
+
 const ItemCard = ({ 
   item, 
   parentId, 
@@ -106,7 +117,8 @@ const ItemCard = ({
   onUpdate, 
   lastSeenFormatted,
   duplicateInfo,
-  duplicateMap 
+  duplicateMap,
+  videoInfo // New prop with pre-computed video info
 }) => {
   const { toggleItem, isSelected } = useSelection();
   const { settings } = useSettings();
@@ -121,6 +133,11 @@ const ItemCard = ({
 
   const itemKey = `${parentId}-${saveIndex}`;
   const selected = isSelected(itemKey);
+
+  // Use pre-computed video info
+  const isVideo = videoInfo?.isVideo || false;
+  const videoPlatform = videoInfo?.platform || null;
+  const isReel = videoInfo?.isReel || false;
 
   // Get duplicate information
   const itemDuplicateInfo = duplicateInfo || duplicateMap?.get(itemKey);
@@ -273,7 +290,7 @@ const ItemCard = ({
 
   return (
     <>
-      <div className={`item-card ${item.seen ? 'seen' : ''} ${updating ? 'updating' : ''} ${selected ? 'selected' : ''} ${isDuplicate ? 'duplicate-item' : ''} ${isOriginal && duplicateCount > 0 ? 'has-duplicates' : ''}`}>
+      <div className={`item-card ${item.seen ? 'seen' : ''} ${updating ? 'updating' : ''} ${selected ? 'selected' : ''} ${isDuplicate ? 'duplicate-item' : ''} ${isOriginal && duplicateCount > 0 ? 'has-duplicates' : ''} ${isVideo ? 'video-item' : ''}`}>
         {/* Duplicate Badge */}
         {(isDuplicate || (isOriginal && duplicateCount > 0)) && settings.highlightDuplicates && (
           <div className={`duplicate-badge ${isDuplicate ? 'is-duplicate' : 'is-original'}`}>
@@ -291,11 +308,6 @@ const ItemCard = ({
                 <span>{duplicateCount} duplicate{duplicateCount !== 1 ? 's' : ''} in other collections</span>
                 {otherLocations.length > 0 && (
                   <div className="other-locations">
-                    {/* {otherLocations.slice(0, 3).map((loc, idx) => (
-                      <span key={idx} className="location-tag">
-                        {loc.collectionId === parentId ? 'this collection' : 'another collection'}
-                      </span>
-                    ))} */}
                     {otherLocations.length > 3 && (
                       <span className="location-tag">+{otherLocations.length - 3} more</span>
                     )}
@@ -303,6 +315,24 @@ const ItemCard = ({
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* Video Badge - Using pre-computed videoInfo */}
+        {isVideo && videoPlatform && (
+          <div className="video-badge-wrapper">
+            <span 
+              className="video-badge"
+              style={getVideoBadgeStyle(videoPlatform)}
+            >
+              <span className="video-icon">{videoPlatform.icon}</span>
+              <span className="video-name">{videoPlatform.name}</span>
+              {isReel ? (
+                <span className="video-type">Short</span>
+              ) : (
+                <span className="video-type">Video</span>
+              )}
+            </span>
           </div>
         )}
 
@@ -321,6 +351,8 @@ const ItemCard = ({
           <div className="item-avatar">
             {favicon ? (
               <img src={favicon} alt="" style={{ width: 20, height: 20 }} />
+            ) : isVideo ? (
+              <FiFilm style={{ color: videoPlatform?.color || '#1877f2' }} />
             ) : (
               <FiExternalLink />
             )}
@@ -353,6 +385,18 @@ const ItemCard = ({
           </button>
         </div>
 
+        {/* Video platform indicator in content area */}
+        {isVideo && videoPlatform && (
+          <div className="video-platform-indicator">
+            <span className="video-label">
+              {videoPlatform.icon} {videoPlatform.name}
+            </span>
+            {isReel ? (
+              <span className="video-type-badge">Reel/Short</span>
+            ) : null}
+          </div>
+        )}
+
         {/* Content preview - Show on {website name} */}
         <div className="item-content">
           {item.url && (
@@ -363,8 +407,14 @@ const ItemCard = ({
               onClick={handleLinkClick}
               className="item-url"
             >
-              <FiExternalLink className="url-icon" />
-              <span className="url-text">Show on {siteName}</span>
+              {isVideo ? (
+                <FiFilm className="url-icon" style={{ color: videoPlatform?.color }} />
+              ) : (
+                <FiExternalLink className="url-icon" />
+              )}
+              <span className="url-text">
+                {isVideo ? `Watch on ${videoPlatform?.name || siteName}` : `Show on ${siteName}`}
+              </span>
             </a>
           )}
         </div>
@@ -436,7 +486,7 @@ const ItemCard = ({
 
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="action-btn"
+            className="action-btn delete"
             title="Delete"
             disabled={updating}
           >

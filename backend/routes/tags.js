@@ -3,9 +3,20 @@ const router = express.Router();
 const Collection = require('../models/SavedItem');
 const authMiddleware = require('../middleware/auth');
 
+// Test route to verify tags router is working
+router.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Tags router is working!',
+    timestamp: new Date().toISOString(),
+    routes: ['GET /test', 'GET /all', 'POST /add', 'DELETE /remove', 'PATCH /color', 'GET /items/:tagName']
+  });
+});
+
 // Get all unique tags for the current user
 router.get('/all', authMiddleware, async (req, res) => {
   try {
+    console.log('Fetching all tags for user:', req.userId);
+    
     const collections = await Collection.find(
       { userId: req.userId }, 
       { saves: 1 }
@@ -39,6 +50,8 @@ router.get('/all', authMiddleware, async (req, res) => {
     
     const tags = Array.from(tagMap.values()).sort((a, b) => b.count - a.count);
     
+    console.log(`Found ${tags.length} unique tags`);
+    
     res.json({
       success: true,
       tags
@@ -53,6 +66,8 @@ router.get('/all', authMiddleware, async (req, res) => {
 router.post('/add', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex, tag } = req.body;
+    
+    console.log('Adding tag:', { collectionId, saveIndex, tag });
     
     if (!collectionId || saveIndex === undefined || !tag) {
       return res.status(400).json({ error: 'Collection ID, save index, and tag are required' });
@@ -71,15 +86,16 @@ router.post('/add', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Collection not found' });
     }
     
-    if (!collection.saves || !Array.isArray(collection.saves) || saveIndex >= collection.saves.length) {
+    const index = parseInt(saveIndex);
+    if (!collection.saves || !Array.isArray(collection.saves) || index >= collection.saves.length) {
       return res.status(404).json({ error: 'Save item not found' });
     }
     
-    if (!collection.saves[saveIndex].tags) {
-      collection.saves[saveIndex].tags = [];
+    if (!collection.saves[index].tags) {
+      collection.saves[index].tags = [];
     }
     
-    const tagExists = collection.saves[saveIndex].tags.some(
+    const tagExists = collection.saves[index].tags.some(
       t => t.name.toLowerCase() === tag.name.toLowerCase()
     );
     
@@ -92,9 +108,9 @@ router.post('/add', authMiddleware, async (req, res) => {
       color: tag.color || '#3498db'
     };
     
-    collection.saves[saveIndex].tags.push(newTag);
+    collection.saves[index].tags.push(newTag);
     collection.updatedAt = new Date();
-    collection.markModified(`saves.${saveIndex}.tags`);
+    collection.markModified(`saves.${index}.tags`);
     
     await collection.save();
     
@@ -114,6 +130,8 @@ router.delete('/remove', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex, tagName } = req.body;
     
+    console.log('Removing tag:', { collectionId, saveIndex, tagName });
+    
     if (!collectionId || saveIndex === undefined || !tagName) {
       return res.status(400).json({ error: 'Collection ID, save index, and tag name are required' });
     }
@@ -127,25 +145,26 @@ router.delete('/remove', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Collection not found' });
     }
     
-    if (!collection.saves || !Array.isArray(collection.saves) || saveIndex >= collection.saves.length) {
+    const index = parseInt(saveIndex);
+    if (!collection.saves || !Array.isArray(collection.saves) || index >= collection.saves.length) {
       return res.status(404).json({ error: 'Save item not found' });
     }
     
-    if (!collection.saves[saveIndex].tags) {
+    if (!collection.saves[index].tags) {
       return res.status(404).json({ error: 'No tags found on this item' });
     }
     
-    const originalLength = collection.saves[saveIndex].tags.length;
-    collection.saves[saveIndex].tags = collection.saves[saveIndex].tags.filter(
+    const originalLength = collection.saves[index].tags.length;
+    collection.saves[index].tags = collection.saves[index].tags.filter(
       t => t.name.toLowerCase() !== tagName.toLowerCase()
     );
     
-    if (collection.saves[saveIndex].tags.length === originalLength) {
+    if (collection.saves[index].tags.length === originalLength) {
       return res.status(404).json({ error: 'Tag not found on this item' });
     }
     
     collection.updatedAt = new Date();
-    collection.markModified(`saves.${saveIndex}.tags`);
+    collection.markModified(`saves.${index}.tags`);
     
     await collection.save();
     
@@ -163,6 +182,8 @@ router.delete('/remove', authMiddleware, async (req, res) => {
 router.patch('/color', authMiddleware, async (req, res) => {
   try {
     const { tagName, color } = req.body;
+    
+    console.log('Updating tag color:', { tagName, color });
     
     if (!tagName || !color) {
       return res.status(400).json({ error: 'Tag name and color are required' });
@@ -194,6 +215,7 @@ router.patch('/color', authMiddleware, async (req, res) => {
       
       if (modified) {
         collection.updatedAt = new Date();
+        collection.markModified('saves');
         await collection.save();
       }
     }
@@ -215,6 +237,8 @@ router.get('/items/:tagName', authMiddleware, async (req, res) => {
     const { tagName } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
+    
+    console.log('Fetching items by tag:', { tagName, page, limit });
     
     const collections = await Collection.find({
       userId: req.userId,

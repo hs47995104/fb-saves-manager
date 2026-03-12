@@ -18,6 +18,7 @@ import FavoritesView from './components/FavoritesView';
 import TagsView from './components/TagsView';
 import SettingsModal from './components/SettingsModal';
 import SeenRecentlyView from './components/SeenRecentlyView';
+import ReelsView from './components/ReelsView';
 import Header from './components/Header';
 import './App.css';
 import './components/Styles.css';
@@ -87,6 +88,14 @@ function AppContent() {
                 element={
                   <PrivateRoute>
                     <AllItemsView onUpdate={handleCollectionUpdate} />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/reels" 
+                element={
+                  <PrivateRoute>
+                    <ReelsView onUpdate={handleCollectionUpdate} />
                   </PrivateRoute>
                 } 
               />

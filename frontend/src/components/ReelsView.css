@@ -1,0 +1,126 @@
+/* frontend/src/components/ReelsView.css */
+
+.reels-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.platform-group {
+  margin-bottom: 24px;
+}
+
+.platform-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--fb-card-bg);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid var(--fb-border);
+  box-shadow: 0 1px 2px var(--fb-shadow);
+}
+
+.platform-icon {
+  font-size: 24px;
+}
+
+.platform-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fb-text);
+}
+
+.platform-count {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: var(--fb-hover);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--fb-text-secondary);
+}
+
+/* Platform stat cards */
+.stat-card.platform {
+  background: linear-gradient(135deg, var(--fb-card-bg), var(--fb-hover));
+}
+
+.stat-card.platform .stat-icon {
+  background: var(--fb-warning-light);
+  color: var(--fb-warning);
+}
+
+/* Video badges */
+.video-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--fb-info-light);
+  border: 1px solid var(--fb-info);
+  border-radius: 12px;
+  color: var(--fb-blue);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.video-badge.youtube {
+  background: #ff000020;
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+.video-badge.instagram {
+  background: #e1306c20;
+  border-color: #e1306c;
+  color: #e1306c;
+}
+
+.video-badge.tiktok {
+  background: #00000020;
+  border-color: #000000;
+  color: #000000;
+}
+
+.dark-mode .video-badge.tiktok {
+  background: #ffffff20;
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .platform-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .platform-count {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .stat-card.platform .stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+}
+
+/* Animation for platform groups */
+.platform-group {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

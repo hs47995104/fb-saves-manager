@@ -15,7 +15,8 @@ import {
   FiX,
   FiChevronDown,
   FiSun,
-  FiMoon
+  FiMoon,
+  FiFilm
 } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -35,23 +36,26 @@ const Header = ({ onSettingsClick }) => {
   const headerRef = useRef(null);
   const userMenuRef = useRef(null);
 
-  // Navigation items configuration
+  // Find the navItems array and add a new item for reels
   const navItems = [
     { id: 'collections', label: 'Collections', icon: <FiHome />, path: '/collections' },
     { id: 'all-items', label: 'All Items', icon: <FiBookmark />, path: '/all-items' },
+    { id: 'reels', label: 'Reels', icon: <FiFilm />, path: '/reels' }, // Add this line
     { id: 'seen-recently', label: 'Recently Seen', icon: <FiEye />, path: '/seen-recently' },
     { id: 'favorites', label: 'Favorites', icon: <FiHeart />, path: '/favorites' },
     { id: 'tags', label: 'Tags', icon: <FiTag />, path: '/tags' },
     { id: 'upload', label: 'Upload', icon: <FiUpload />, path: '/upload' }
   ];
 
-  // Update active tab based on current route
+  // In the useEffect for active tab, add reels case
   useEffect(() => {
     const path = location.pathname;
     if (path === '/collections' || path === '/') {
       setActiveTab('collections');
     } else if (path === '/all-items') {
       setActiveTab('all-items');
+    } else if (path === '/reels') {  // Add this
+      setActiveTab('reels');
     } else if (path === '/seen-recently') {
       setActiveTab('seen-recently');
     } else if (path === '/favorites') {

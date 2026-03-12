@@ -3,10 +3,21 @@ const router = express.Router();
 const Collection = require('../models/SavedItem');
 const authMiddleware = require('../middleware/auth');
 
+// Test route to verify comments router is working
+router.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Comments router is working!',
+    timestamp: new Date().toISOString(),
+    routes: ['GET /test', 'POST /add', 'PATCH /update', 'DELETE /delete', 'GET /item/:collectionId/:saveIndex']
+  });
+});
+
 // Add a comment to a specific save item
 router.post('/add', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex, text } = req.body;
+    
+    console.log('Adding comment:', { collectionId, saveIndex, text });
     
     if (!collectionId || saveIndex === undefined || !text) {
       return res.status(400).json({ error: 'Collection ID, save index, and comment text are required' });
@@ -66,6 +77,8 @@ router.patch('/update', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex, commentIndex, text } = req.body;
     
+    console.log('Updating comment:', { collectionId, saveIndex, commentIndex, text });
+    
     if (!collectionId || saveIndex === undefined || commentIndex === undefined || !text) {
       return res.status(400).json({ error: 'Collection ID, save index, comment index, and text are required' });
     }
@@ -117,6 +130,8 @@ router.delete('/delete', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex, commentIndex } = req.body;
     
+    console.log('Deleting comment:', { collectionId, saveIndex, commentIndex });
+    
     if (!collectionId || saveIndex === undefined || commentIndex === undefined) {
       return res.status(400).json({ error: 'Collection ID, save index, and comment index are required' });
     }
@@ -161,6 +176,8 @@ router.delete('/delete', authMiddleware, async (req, res) => {
 router.get('/item/:collectionId/:saveIndex', authMiddleware, async (req, res) => {
   try {
     const { collectionId, saveIndex } = req.params;
+    
+    console.log('Getting comments for item:', { collectionId, saveIndex });
     
     const collection = await Collection.findOne({ 
       userId: req.userId,
